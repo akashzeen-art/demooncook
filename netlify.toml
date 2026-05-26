@@ -1,19 +1,20 @@
 [build]
-command = "npm run build:client"
-functions = "netlify/functions"
-publish = "dist/spa"
+  command = "pnpm install && pnpm build:client"
+  publish = "dist"
 
+[build.environment]
+  NODE_VERSION = "18"
 
 [functions]
-external_node_modules = ["express"]
-node_bundler = "esbuild"
-[[redirects]]
-force = true
-from = "/api/*"
-status = 200
-to = "/.netlify/functions/api/:splat"
+  directory = "netlify/functions"
 
 [[redirects]]
-from = "/*"
-to = "/index.html"
-status = 200
+  from = "/api/login"
+  to = "http://168.144.122.72/prod/CPLogin/CMMTN"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

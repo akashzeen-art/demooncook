@@ -1,23 +1,21 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import { handleDemo } from "./routes/demo";
+import { handleLogin } from "./routes/subscription";
 
 export function createServer() {
   const app = express();
 
-  // Middleware
   app.use(cors());
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  // Example API routes
   app.get("/api/ping", (_req, res) => {
-    const ping = process.env.PING_MESSAGE ?? "ping";
-    res.json({ message: ping });
+    res.json({ message: process.env.PING_MESSAGE ?? "ping" });
   });
 
-  app.get("/api/demo", handleDemo);
+  // CM MTN Login proxy — avoids CORS on frontend
+  app.get("/api/login", handleLogin);
 
   return app;
 }

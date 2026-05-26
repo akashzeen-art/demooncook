@@ -1,5 +1,5 @@
 /** @import must precede all other statements */
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800;900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,800;0,900;1,700&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600;1,700&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -133,6 +133,54 @@
 }
 
 @layer components {
+  .oncook-brand {
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-weight: 800;
+    font-style: italic;
+    letter-spacing: 0.12em;
+    background: linear-gradient(
+      135deg,
+      #c8a96e 0%,
+      #f5e6c8 25%,
+      #ffffff 45%,
+      #f5e6c8 65%,
+      #c8a96e 80%,
+      #f0d080 100%
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    filter:
+      drop-shadow(0 0 8px rgba(200, 169, 110, 0.6))
+      drop-shadow(0 2px 20px rgba(200, 169, 110, 0.3));
+    position: relative;
+    display: inline-block;
+    line-height: 1.1;
+  }
+
+  .oncook-brand::after {
+    content: attr(data-text);
+    position: absolute;
+    left: 0;
+    top: 0;
+    background: linear-gradient(135deg, #c8a96e, #f5e6c8, #ffffff, #c8a96e);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    opacity: 0.15;
+    filter: blur(6px);
+    z-index: -1;
+  }
+
+  .oncook-brand .brand-O,
+  .oncook-brand .brand-C {
+    font-size: 1.25em;
+    font-weight: 900;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 0.04em;
+  }
+
   .gradient-accent {
     @apply bg-gradient-to-r from-red-600 via-red-500 to-orange-500;
   }

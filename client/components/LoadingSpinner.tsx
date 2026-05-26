@@ -1,4 +1,3 @@
-import { Play } from "lucide-react";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -90,38 +89,17 @@ export const LoadingSpinner = ({ onComplete, duration = 8 }: LoadingSpinnerProps
           {/* Content */}
           <div className="relative z-10 flex flex-col items-center gap-6">
 
-            {/* Outer pulsing ring */}
-            <div className="relative flex items-center justify-center">
-              <motion.div
-                className="absolute w-32 h-32 rounded-full border border-red-500/30"
-                animate={{ scale: [1, 1.6, 1], opacity: [0.6, 0, 0.6] }}
-                transition={{ duration: 2.5, repeat: Infinity, ease: "easeOut" }}
-              />
-              <motion.div
-                className="absolute w-24 h-24 rounded-full border border-red-500/50"
-                animate={{ scale: [1, 1.4, 1], opacity: [0.8, 0, 0.8] }}
-                transition={{ duration: 2.5, repeat: Infinity, ease: "easeOut", delay: 0.4 }}
-              />
-
-              {/* Logo icon */}
-              <motion.div
-                initial={{ scale: 0, rotate: -180 }}
-                animate={{ scale: 1, rotate: 0 }}
-                transition={{ duration: 0.8, ease: "backOut", delay: 0.2 }}
-                className="relative w-20 h-20 bg-gradient-to-br from-red-600 to-orange-500 rounded-2xl flex items-center justify-center shadow-2xl shadow-red-600/60"
-              >
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-                  className="absolute inset-0 rounded-2xl border-2 border-dashed border-red-400/30"
-                />
-                <Play className="w-9 h-9 text-white fill-white relative z-10" />
-              </motion.div>
-            </div>
-
             {/* Brand logo */}
-            <div className="flex gap-[2px]">
-              <img src="/image.png" alt="On Cook" className="h-20 md:h-28 w-auto object-contain" />
+            <div className="flex flex-col items-center gap-2">
+              <img src="/logo/logo (1).png" alt="On Cook" className="h-20 md:h-28 w-auto object-contain" />
+              <motion.span
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 1.0 }}
+                className="oncook-brand text-3xl md:text-4xl"
+              >
+                <span className="brand-O">O</span>n<span className="brand-C">C</span>ook
+              </motion.span>
             </div>
 
             {/* Subtitle */}

@@ -66,6 +66,8 @@ export default {
       fontFamily: {
         cinematic: ["Poppins", "system-ui", "sans-serif"],
         sans: ["Inter", "system-ui", "sans-serif"],
+        brand: ["Playfair Display", "Georgia", "serif"],
+        luxury: ["Cormorant Garamond", "Georgia", "serif"],
       },
       keyframes: {
         "accordion-down": {
