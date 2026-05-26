@@ -1,7 +1,14 @@
 {
-  "buildCommand": "npm run build:client",
-  "outputDirectory": "dist/spa",
+  "buildCommand": "pnpm install && pnpm build:client",
+  "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/api/login",
+      "destination": "http://168.144.122.72/prod/CPLogin/CMMTN"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }
