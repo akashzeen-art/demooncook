@@ -1,6 +1,6 @@
 import { useRef } from "react";
-import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Play } from "lucide-react";
+import { motion } from "framer-motion";
 import { VideoCard } from "@/components/VideoCard";
 
 export interface FrVideo {
@@ -47,10 +47,10 @@ export const CategorySectionFr = ({
             </div>
           </motion.div>
           <div className="flex gap-2">
-            <button onClick={() => scroll("left")} className="w-9 h-9 rounded-full bg-white/8 hover:bg-white/15 border border-white/10 flex items-center justify-center text-white transition-all">
+            <button onClick={() => scroll("left")} className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center text-white transition-all">
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <button onClick={() => scroll("right")} className="w-9 h-9 rounded-full bg-white/8 hover:bg-white/15 border border-white/10 flex items-center justify-center text-white transition-all">
+            <button onClick={() => scroll("right")} className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center text-white transition-all">
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
@@ -58,21 +58,17 @@ export const CategorySectionFr = ({
 
         <div ref={sliderRef} className="flex gap-5 overflow-x-auto scrollbar-hide pb-3">
           {videos.map((video, i) => (
-            <motion.div
+            <div
               key={video.id}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.05 }}
               className="group flex-shrink-0 w-56 md:w-64 cursor-pointer"
             >
               <div className="relative aspect-video rounded-2xl overflow-hidden mb-3 shadow-lg shadow-black/40">
                 <VideoCard image={video.image} video={video.video} title={video.title} className="absolute inset-0 w-full h-full">
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300" />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
-                    <motion.div whileHover={{ scale: 1.1 }} className="w-12 h-12 rounded-full flex items-center justify-center shadow-2xl" style={{ backgroundColor: accentHex }}>
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center shadow-2xl" style={{ backgroundColor: accentHex }}>
                       <Play className="w-5 h-5 fill-white text-white ml-0.5" />
-                    </motion.div>
+                    </div>
                   </div>
                 </VideoCard>
               </div>
@@ -80,7 +76,7 @@ export const CategorySectionFr = ({
                 <h3 className="text-white text-sm font-semibold leading-snug line-clamp-2 group-hover:text-gray-200 transition-colors">{video.title}</h3>
                 <p className="text-xs mt-1 font-medium" style={{ color: accentHex }}>{video.category}</p>
               </div>
-            </motion.div>
+            </div>
           ))}
         </div>
       </div>
