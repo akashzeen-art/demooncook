@@ -8,6 +8,9 @@ import { FR_VIDEOS } from "@/lib/videos-fr";
 
 export default function Index() {
   const [isLoading, setIsLoading] = useState(!sessionStorage.getItem("preloaderShown"));
+  sessionStorage.setItem("lang", "fr");
+
+  sessionStorage.setItem("lang", "fr");
 
   if (isLoading) {
     return (

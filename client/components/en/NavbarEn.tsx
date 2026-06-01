@@ -131,7 +131,7 @@ export const NavbarEn = () => {
               {isLoggedIn ? (
                 <button onClick={() => navigate("/account")} className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-300 hover:text-white border border-white/20 hover:border-white/40 rounded-lg transition-all">
                   <User className="w-3.5 h-3.5" />
-                  <span className="max-w-[80px] truncate">{msisdn || "Account"}</span>
+                  <span>My Account</span>
                 </button>
               ) : (
                 <button onClick={() => setShowLogin(true)} className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-all">

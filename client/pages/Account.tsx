@@ -3,26 +3,66 @@ import { useNavigate } from "react-router-dom";
 import { User, Calendar, Phone, Shield, DollarSign, LogOut, ArrowLeft, RefreshCw } from "lucide-react";
 import { useSubscription } from "@/lib/subscription";
 import { Navbar } from "@/components/Navbar";
+import { NavbarEn } from "@/components/en/NavbarEn";
 import { Footer } from "@/components/Footer";
+import { FooterEn } from "@/components/en/FooterEn";
+
+const T = {
+  fr: {
+    back:           "Retour",
+    title:          "Mon Compte",
+    subscriber:     "Abonné",
+    active:         "Abonnement Actif",
+    inactive:       "Aucun Abonnement Actif",
+    details:        "Détails de l'Abonnement",
+    mobile:         "Mobile",
+    price:          "Prix",
+    activated:      "Activé le",
+    renews:         "Renouvellement",
+    validity:       "Validité",
+    days:           "jour(s)",
+    cancelMsg:      "Voulez-vous annuler votre abonnement ?",
+    unsubscribe:    "Se désabonner",
+    logout:         "Déconnexion",
+  },
+  en: {
+    back:           "Back",
+    title:          "My Account",
+    subscriber:     "Subscriber",
+    active:         "Active Subscription",
+    inactive:       "No Active Subscription",
+    details:        "Subscription Details",
+    mobile:         "Mobile",
+    price:          "Price",
+    activated:      "Activated",
+    renews:         "Renews On",
+    validity:       "Validity",
+    days:           "day(s)",
+    cancelMsg:      "Want to cancel your subscription?",
+    unsubscribe:    "Unsubscribe",
+    logout:         "Logout",
+  },
+};
 
 export default function Account() {
   const { detail, msisdn, isSubscribed, logout } = useSubscription();
   const navigate = useNavigate();
+  const lang     = (sessionStorage.getItem("lang") || "fr") as "fr" | "en";
+  const t        = T[lang];
 
   const handleUnsub = () => {
-    if (detail?.unsubUrl) {
-      window.location.href = detail.unsubUrl;
-    }
+    if (detail?.unsubUrl) window.location.href = detail.unsubUrl;
   };
 
   return (
     <div className="bg-black min-h-screen text-white">
-      <Navbar />
+      {lang === "en" ? <NavbarEn /> : <Navbar />}
+
       <div className="max-w-2xl mx-auto px-4 py-16">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
 
           <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm">
-            <ArrowLeft className="w-4 h-4" /> Back
+            <ArrowLeft className="w-4 h-4" /> {t.back}
           </button>
 
           {/* Header */}
@@ -31,8 +71,8 @@ export default function Account() {
               <User className="w-7 h-7 text-red-400" />
             </div>
             <div>
-              <h1 className="text-2xl font-cinematic text-white">My Account</h1>
-              <p className="text-gray-500 text-sm">{msisdn || "Subscriber"}</p>
+              <h1 className="text-2xl font-cinematic text-white">{t.title}</h1>
+              <p className="text-gray-500 text-sm">{msisdn || t.subscriber}</p>
             </div>
           </div>
 
@@ -40,7 +80,7 @@ export default function Account() {
           <div className={`p-4 rounded-2xl border flex items-center gap-3 ${isSubscribed ? "bg-green-500/5 border-green-500/20" : "bg-red-500/5 border-red-500/20"}`}>
             <div className={`w-3 h-3 rounded-full animate-pulse ${isSubscribed ? "bg-green-500" : "bg-red-500"}`} />
             <span className={`font-semibold text-sm ${isSubscribed ? "text-green-400" : "text-red-400"}`}>
-              {isSubscribed ? "Active Subscription" : "No Active Subscription"}
+              {isSubscribed ? t.active : t.inactive}
             </span>
           </div>
 
@@ -48,19 +88,19 @@ export default function Account() {
           {detail && (
             <div className="bg-zinc-900 border border-white/10 rounded-2xl overflow-hidden">
               <div className="px-5 py-3 border-b border-white/5">
-                <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Subscription Details</h2>
+                <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest">{t.details}</h2>
               </div>
               <div className="divide-y divide-white/5">
                 {[
-                  { icon: <Phone className="w-4 h-4 text-blue-400" />,        label: "Mobile",       value: detail.msisdn },
-                  { icon: <Shield className="w-4 h-4 text-red-400" />,        label: "Price",        value: detail.pricePoint },
-                  { icon: <Calendar className="w-4 h-4 text-green-400" />,    label: "Activated",    value: detail.actDate },
-                  { icon: <RefreshCw className="w-4 h-4 text-orange-400" />,  label: "Renews On",    value: detail.renewDate },
-                  { icon: <DollarSign className="w-4 h-4 text-yellow-400" />, label: "Validity",     value: `${detail.validity} day(s)` },
+                  { icon: <Phone className="w-4 h-4 text-blue-400" />,        label: t.mobile,    value: detail.msisdn },
+                  { icon: <Shield className="w-4 h-4 text-red-400" />,        label: t.price,     value: detail.pricePoint },
+                  { icon: <Calendar className="w-4 h-4 text-green-400" />,    label: t.activated, value: detail.actDate },
+                  { icon: <RefreshCw className="w-4 h-4 text-orange-400" />,  label: t.renews,    value: detail.renewDate },
+                  { icon: <DollarSign className="w-4 h-4 text-yellow-400" />, label: t.validity,  value: `${detail.validity} ${t.days}` },
                 ].map((row) => (
                   <div key={row.label} className="flex items-center gap-4 px-5 py-4">
                     {row.icon}
-                    <span className="text-gray-500 text-sm w-24">{row.label}</span>
+                    <span className="text-gray-500 text-sm w-28">{row.label}</span>
                     <span className="text-white text-sm font-medium">{row.value}</span>
                   </div>
                 ))}
@@ -72,27 +112,21 @@ export default function Account() {
           <div className="pt-4 border-t border-white/10 space-y-3">
             {isSubscribed && detail?.unsubUrl && (
               <div>
-                <p className="text-gray-500 text-sm mb-3">Want to cancel your subscription?</p>
-                <button
-                  onClick={handleUnsub}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-white/5 hover:bg-red-600/20 border border-white/10 hover:border-red-500/40 text-gray-300 hover:text-red-400 rounded-xl text-sm transition-all"
-                >
-                  <LogOut className="w-4 h-4" /> Unsubscribe
+                <p className="text-gray-500 text-sm mb-3">{t.cancelMsg}</p>
+                <button onClick={handleUnsub} className="flex items-center gap-2 px-5 py-2.5 bg-white/5 hover:bg-red-600/20 border border-white/10 hover:border-red-500/40 text-gray-300 hover:text-red-400 rounded-xl text-sm transition-all">
+                  <LogOut className="w-4 h-4" /> {t.unsubscribe}
                 </button>
               </div>
             )}
-
-            <button
-              onClick={() => { logout(); navigate("/"); }}
-              className="flex items-center gap-2 px-5 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white rounded-xl text-sm transition-all"
-            >
-              <LogOut className="w-4 h-4" /> Logout
+            <button onClick={() => { logout(); navigate("/"); }} className="flex items-center gap-2 px-5 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white rounded-xl text-sm transition-all">
+              <LogOut className="w-4 h-4" /> {t.logout}
             </button>
           </div>
 
         </motion.div>
       </div>
-      <Footer />
+
+      {lang === "en" ? <FooterEn /> : <Footer />}
     </div>
   );
 }

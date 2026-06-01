@@ -8,6 +8,7 @@ import { EN_VIDEOS } from "@/lib/videos-en";
 
 export default function IndexEn() {
   const [isLoading] = useState(false);
+  sessionStorage.setItem("lang", "en");
 
   if (isLoading) {
     return <LoadingSpinner onComplete={() => setIsLoading(false)} />;
