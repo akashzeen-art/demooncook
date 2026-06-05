@@ -51,7 +51,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     const saved     = sessionStorage.getItem("msisdn");
 
     if (urlMsisdn) {
-      // ?msisdn= or ?subid= in URL — add 237 and grant access immediately
+      // ?msisdn= in URL (with or without sid) — add 237 and grant access immediately
       const cleaned = normalise(urlMsisdn);
       sessionStorage.setItem("msisdn", cleaned);
       setMsisdn(cleaned);
@@ -61,8 +61,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
       fetchDetailByMsisdn(cleaned);
 
     } else if (urlSid) {
-      // ?sid= in URL — operator sends session ID after subscription
-      // Grant access immediately, verify + get msisdn in background
+      // ?sid= only — grant access immediately, get msisdn in background
       sessionStorage.setItem("sid", urlSid);
       setIsLoggedIn(true);
       setIsSubscribed(true);
