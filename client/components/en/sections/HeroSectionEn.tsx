@@ -2,6 +2,10 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, ChevronRight } from "lucide-react";
 import { EN_VIDEOS } from "@/lib/videos-en";
+import { createPortal } from "react-dom";
+import { VideoPlayer } from "@/components/VideoPlayer";
+import { LoginModal } from "@/components/LoginModal";
+import { useSubscription } from "@/lib/subscription";
 
 const BANNERS = [
   { image: EN_VIDEOS.african[0].image,    video: EN_VIDEOS.african[0].video,    title: "African Kitchen",       category: "African",     desc: "Bold spices, rich stews and the vibrant soul of African cooking." },
@@ -20,7 +24,10 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export const HeroSectionEn = () => {
-  const [index, setIndex] = useState(0);
+  const [index, setIndex]         = useState(0);
+  const [open, setOpen]           = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+  const { isSubscribed }          = useSubscription();
 
   useEffect(() => {
     const t = setInterval(() => setIndex((p) => (p + 1) % BANNERS.length), 7000);
@@ -95,6 +102,7 @@ export const HeroSectionEn = () => {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                onClick={() => isSubscribed ? setOpen(true) : setShowLogin(true)}
                 className="flex items-center gap-2 px-6 py-3 md:px-8 md:py-4 bg-white text-black font-bold rounded-xl hover:bg-gray-100 transition-all text-sm md:text-base shadow-xl"
               >
                 <Play className="w-4 h-4 fill-black" /> Watch Now
@@ -102,6 +110,7 @@ export const HeroSectionEn = () => {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                onClick={() => document.getElementById("african")?.scrollIntoView({ behavior: "smooth" })}
                 className="flex items-center gap-2 px-6 py-3 md:px-8 md:py-4 bg-white/10 text-white font-semibold rounded-xl border border-white/30 hover:bg-white/20 transition-all backdrop-blur-sm text-sm md:text-base"
               >
                 Explore <ChevronRight className="w-4 h-4" />
@@ -121,6 +130,15 @@ export const HeroSectionEn = () => {
           ))}
         </div>
       </div>
+
+      {open && createPortal(
+        <VideoPlayer video={banner.video} image={banner.image} title={banner.title} onClose={() => setOpen(false)} />,
+        document.body
+      )}
+      {showLogin && createPortal(
+        <LoginModal onClose={() => setShowLogin(false)} />,
+        document.body
+      )}
     </section>
   );
 };

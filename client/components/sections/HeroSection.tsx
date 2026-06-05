@@ -2,6 +2,10 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, Info } from "lucide-react";
 import { VIDEOS } from "@/lib/videos";
+import { VideoPlayer } from "@/components/VideoPlayer";
+import { LoginModal } from "@/components/LoginModal";
+import { useSubscription } from "@/lib/subscription";
+import { createPortal } from "react-dom";
 
 const BANNERS = [
   { image: "/COOKING/i1.jpg",  video: VIDEOS[1],  title: "Saveurs du Monde",      genre: "Cuisine · Voyage",        desc: "Un voyage culinaire époustouflant à travers les saveurs du monde entier." },
@@ -12,7 +16,10 @@ const BANNERS = [
 ];
 
 export const HeroSection = () => {
-  const [index, setIndex] = useState(0);
+  const [index, setIndex]         = useState(0);
+  const [open, setOpen]           = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+  const { isSubscribed }          = useSubscription();
 
   useEffect(() => {
     const t = setInterval(() => setIndex((p) => (p + 1) % BANNERS.length), 8000);
@@ -59,10 +66,16 @@ export const HeroSection = () => {
             </h1>
             <p className="text-gray-300 text-sm sm:text-base md:text-lg max-w-lg line-clamp-2 md:line-clamp-none">{banner.desc}</p>
             <div className="flex gap-3 pt-1">
-              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex items-center gap-2 px-5 py-3 md:px-8 md:py-4 bg-white text-black font-bold rounded-lg hover:bg-gray-200 transition-all text-sm md:text-base">
-                <Play className="w-4 h-4 md:w-5 md:h-5 fill-black" /> Lire maintenant
+              <motion.button
+                whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                onClick={() => isSubscribed ? setOpen(true) : setShowLogin(true)}
+                className="flex items-center gap-2 px-5 py-3 md:px-8 md:py-4 bg-white text-black font-bold rounded-lg hover:bg-gray-200 transition-all text-sm md:text-base">
+                <Play className="w-4 h-4 md:w-5 md:h-5 fill-black" /> Regarder la vidéo
               </motion.button>
-              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex items-center gap-2 px-5 py-3 md:px-8 md:py-4 bg-white/20 text-white font-semibold rounded-lg border border-white/30 hover:bg-white/30 transition-all backdrop-blur-sm text-sm md:text-base">
+              <motion.button
+                whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                onClick={() => document.getElementById("cuisine")?.scrollIntoView({ behavior: "smooth" })}
+                className="flex items-center gap-2 px-5 py-3 md:px-8 md:py-4 bg-white/20 text-white font-semibold rounded-lg border border-white/30 hover:bg-white/30 transition-all backdrop-blur-sm text-sm md:text-base">
                 <Info className="w-4 h-4 md:w-5 md:h-5" /> Plus d'infos
               </motion.button>
             </div>
@@ -75,6 +88,15 @@ export const HeroSection = () => {
           ))}
         </div>
       </div>
+
+      {open && createPortal(
+        <VideoPlayer video={banner.video} image={banner.image} title={banner.title} onClose={() => setOpen(false)} />,
+        document.body
+      )}
+      {showLogin && createPortal(
+        <LoginModal onClose={() => setShowLogin(false)} />,
+        document.body
+      )}
     </section>
   );
 };
