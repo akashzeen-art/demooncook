@@ -113,11 +113,28 @@ export const VideoPlayer = ({ video, image, title, onClose }: VideoPlayerProps) 
               onContextMenu={(e) => e.preventDefault()}
               onTimeUpdate={handleTimeUpdate}
               onLoadedMetadata={handleLoadedMetadata}
-              onClick={togglePlay}
+              onClick={(e) => { e.stopPropagation(); togglePlay(); }}
               className="absolute inset-0 w-full h-full object-cover cursor-pointer"
             />
 
-            {/* Top bar */}
+            {/* Mobile tap overlay for play/pause */}
+            <div
+              className="absolute inset-0 flex items-center justify-center md:hidden"
+              onClick={(e) => { e.stopPropagation(); togglePlay(); }}
+            >
+              <AnimatePresence>
+                {!playing && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    className="w-16 h-16 rounded-full bg-black/60 flex items-center justify-center border border-white/30"
+                  >
+                    <Play className="w-7 h-7 fill-white text-white ml-1" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
             <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/70 to-transparent">
               {title && (
                 <span className="text-white font-cinematic text-sm md:text-base truncate max-w-xs">{title}</span>
