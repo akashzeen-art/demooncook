@@ -96,7 +96,7 @@ export default function Account() {
                   { icon: <Shield className="w-4 h-4 text-red-400" />,        label: t.price,     value: detail.pricePoint },
                   { icon: <Calendar className="w-4 h-4 text-green-400" />,    label: t.activated, value: detail.actDate },
                   { icon: <RefreshCw className="w-4 h-4 text-orange-400" />,  label: t.renews,    value: detail.renewDate },
-                  { icon: <DollarSign className="w-4 h-4 text-yellow-400" />, label: t.validity,  value: `${detail.validity} ${t.days}` },
+                  { icon: <DollarSign className="w-4 h-4 text-yellow-400" />, label: t.validity,  value: `${detail.validity || "1"} ${Number(detail.validity || 1) === 1 ? (lang === "fr" ? "jour" : "day") : (lang === "fr" ? "jours" : "days")}` },
                 ].map((row) => (
                   <div key={row.label} className="flex items-center gap-4 px-5 py-4">
                     {row.icon}
