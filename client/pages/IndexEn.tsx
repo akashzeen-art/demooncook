@@ -11,7 +11,7 @@ export default function IndexEn() {
   sessionStorage.setItem("lang", "en");
 
   if (isLoading) {
-    return <LoadingSpinner onComplete={() => setIsLoading(false)} />;
+    return <LoadingSpinner onComplete={() => {}} />;
   }
 
   return (
