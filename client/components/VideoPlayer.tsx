@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Volume2, VolumeX, Maximize2, Gauge, Play, Pause } from "lucide-react";
+import { X, Volume2, VolumeX, Maximize2, Gauge, Play, Pause, SkipBack, SkipForward } from "lucide-react";
 
 interface VideoPlayerProps {
   video: string;
@@ -12,7 +12,8 @@ interface VideoPlayerProps {
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
 const fmt = (s: number) => {
-  const m = Math.floor(s / 60);
+  if (!isFinite(s) || s < 0) return "0:00";
+  const m   = Math.floor(s / 60);
   const sec = Math.floor(s % 60);
   return `${m}:${sec.toString().padStart(2, "0")}`;
 };
@@ -34,10 +35,26 @@ export const VideoPlayer = ({ video, image, title, onClose }: VideoPlayerProps) 
   }, []);
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === " ") { e.preventDefault(); togglePlay(); }
+      if (e.key === "ArrowRight") skip(10);
+      if (e.key === "ArrowLeft")  skip(-10);
+    };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [onClose]);
+  }, [onClose, playing]);
+
+  const togglePlay = () => {
+    if (!videoRef.current) return;
+    if (videoRef.current.paused) {
+      videoRef.current.play().catch(() => {});
+      setPlaying(true);
+    } else {
+      videoRef.current.pause();
+      setPlaying(false);
+    }
+  };
 
   const toggleMute = () => {
     if (videoRef.current) {
@@ -46,14 +63,12 @@ export const VideoPlayer = ({ video, image, title, onClose }: VideoPlayerProps) 
     }
   };
 
-  const togglePlay = () => {
+  const skip = (secs: number) => {
     if (!videoRef.current) return;
-    if (playing) {
-      videoRef.current.pause();
-    } else {
-      videoRef.current.play().catch(() => {});
-    }
-    setPlaying(!playing);
+    videoRef.current.currentTime = Math.min(
+      Math.max(0, videoRef.current.currentTime + secs),
+      videoRef.current.duration
+    );
   };
 
   const changeSpeed = (s: number) => {
@@ -74,10 +89,11 @@ export const VideoPlayer = ({ video, image, title, onClose }: VideoPlayerProps) 
     if (videoRef.current) setDuration(videoRef.current.duration);
   };
 
-  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  // Works for both mouse and touch
+  const seek = (clientX: number) => {
     if (!progressRef.current || !videoRef.current) return;
     const rect  = progressRef.current.getBoundingClientRect();
-    const ratio = (e.clientX - rect.left) / rect.width;
+    const ratio = Math.min(Math.max((clientX - rect.left) / rect.width, 0), 1);
     videoRef.current.currentTime = ratio * duration;
   };
 
@@ -113,28 +129,32 @@ export const VideoPlayer = ({ video, image, title, onClose }: VideoPlayerProps) 
               onContextMenu={(e) => e.preventDefault()}
               onTimeUpdate={handleTimeUpdate}
               onLoadedMetadata={handleLoadedMetadata}
-              onClick={(e) => { e.stopPropagation(); togglePlay(); }}
-              className="absolute inset-0 w-full h-full object-cover cursor-pointer"
+              className="absolute inset-0 w-full h-full object-cover"
             />
 
-            {/* Mobile tap overlay for play/pause */}
-            <div
-              className="absolute inset-0 flex items-center justify-center md:hidden"
-              onClick={(e) => { e.stopPropagation(); togglePlay(); }}
-            >
-              <AnimatePresence>
-                {!playing && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    className="w-16 h-16 rounded-full bg-black/60 flex items-center justify-center border border-white/30"
-                  >
-                    <Play className="w-7 h-7 fill-white text-white ml-1" />
-                  </motion.div>
-                )}
-              </AnimatePresence>
+            {/* Center tap zones for mobile — left=back 10s, right=forward 10s */}
+            <div className="absolute inset-0 flex md:hidden">
+              <div className="flex-1" onDoubleClick={() => skip(-10)} onClick={(e) => { e.stopPropagation(); togglePlay(); }} />
+              <div className="flex-1" onDoubleClick={() => skip(10)}  onClick={(e) => { e.stopPropagation(); togglePlay(); }} />
             </div>
+
+            {/* Paused overlay indicator */}
+            <AnimatePresence>
+              {!playing && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                >
+                  <div className="w-16 h-16 rounded-full bg-black/60 flex items-center justify-center border border-white/30">
+                    <Play className="w-7 h-7 fill-white text-white ml-1" />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Top bar */}
             <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/70 to-transparent">
               {title && (
                 <span className="text-white font-cinematic text-sm md:text-base truncate max-w-xs">{title}</span>
@@ -150,28 +170,49 @@ export const VideoPlayer = ({ video, image, title, onClose }: VideoPlayerProps) 
             {/* Bottom controls */}
             <div className="absolute bottom-0 left-0 right-0 px-4 py-3 bg-gradient-to-t from-black/80 to-transparent">
 
-              {/* Progress bar */}
+              {/* Progress bar — mouse + touch */}
               <div
                 ref={progressRef}
-                onClick={handleProgressClick}
-                className="w-full h-1.5 bg-white/20 rounded-full mb-3 cursor-pointer group"
+                className="w-full h-3 flex items-center cursor-pointer group mb-3"
+                onClick={(e) => seek(e.clientX)}
+                onTouchStart={(e) => seek(e.touches[0].clientX)}
+                onTouchMove={(e) => { e.preventDefault(); seek(e.touches[0].clientX); }}
               >
-                <div
-                  className="h-full bg-red-500 rounded-full relative transition-all duration-100"
-                  style={{ width: `${progress}%` }}
-                >
-                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md" />
+                <div className="w-full h-1.5 bg-white/20 rounded-full">
+                  <div
+                    className="h-full bg-red-500 rounded-full relative"
+                    style={{ width: `${progress}%` }}
+                  >
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-white rounded-full shadow-md -mr-1.5" />
+                  </div>
                 </div>
               </div>
 
-              {/* Time + controls row */}
-              <div className="flex items-center gap-3">
-              {/* Play/Pause */}
+              {/* Controls row */}
+              <div className="flex items-center gap-2 md:gap-3">
+
+                {/* Skip back 10s */}
+                <button
+                  onClick={() => skip(-10)}
+                  className="w-8 h-8 rounded-full bg-black/50 hover:bg-black/80 flex items-center justify-center text-white transition-all border border-white/20"
+                >
+                  <SkipBack className="w-4 h-4" />
+                </button>
+
+                {/* Play/Pause */}
                 <button
                   onClick={togglePlay}
                   className="w-8 h-8 rounded-full bg-black/50 hover:bg-black/80 flex items-center justify-center text-white transition-all border border-white/20"
                 >
                   {playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-white" />}
+                </button>
+
+                {/* Skip forward 10s */}
+                <button
+                  onClick={() => skip(10)}
+                  className="w-8 h-8 rounded-full bg-black/50 hover:bg-black/80 flex items-center justify-center text-white transition-all border border-white/20"
+                >
+                  <SkipForward className="w-4 h-4" />
                 </button>
 
                 {/* Mute */}
@@ -182,15 +223,11 @@ export const VideoPlayer = ({ video, image, title, onClose }: VideoPlayerProps) 
                   {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
                 </button>
 
-                {/* Time display */}
-                <span className="text-white text-xs font-mono">
-                  {fmt(current)}
-                </span>
-                <span className="text-gray-400 text-xs font-mono">
-                  -{fmt(remaining)}
-                </span>
+                {/* Time */}
+                <span className="text-white text-xs font-mono">{fmt(current)}</span>
+                <span className="text-gray-400 text-xs font-mono">-{fmt(remaining)}</span>
 
-                {/* Playback speed */}
+                {/* Speed */}
                 <div className="relative">
                   <button
                     onClick={() => setSpeedOpen(!speedOpen)}
@@ -200,7 +237,7 @@ export const VideoPlayer = ({ video, image, title, onClose }: VideoPlayerProps) 
                     {speed}x
                   </button>
                   {speedOpen && (
-                    <div className="absolute bottom-full mb-2 left-0 bg-zinc-900 border border-white/10 rounded-xl overflow-hidden shadow-2xl">
+                    <div className="absolute bottom-full mb-2 left-0 bg-zinc-900 border border-white/10 rounded-xl overflow-hidden shadow-2xl z-10">
                       {SPEEDS.map((s) => (
                         <button
                           key={s}
