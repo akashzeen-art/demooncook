@@ -28,6 +28,12 @@ const SubscriptionContext = createContext<SubscriptionContextType>({
 
 export const useSubscription = () => useContext(SubscriptionContext);
 
+// Add 237 country code if not present
+const normalise = (phone: string) => {
+  const digits = phone.replace(/\D/g, "");
+  return digits.startsWith("237") ? digits : `237${digits}`;
+};
+
 export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   const [msisdn,       setMsisdn]       = useState<string | null>(null);
   const [isSubscribed, setIsSubscribed] = useState<boolean | null>(null);
@@ -35,96 +41,95 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   const [detail,       setDetail]       = useState<SubDetail | null>(null);
 
   useEffect(() => {
-    const params      = new URLSearchParams(window.location.search);
-    // Operator portal sends msisdn WITHOUT country code e.g. ?msisdn=206443329 or ?subid=206443329
-    const urlMsisdn   = params.get("msisdn") || params.get("subid");
-    const saved       = sessionStorage.getItem("msisdn");
-    const fromPortal  = !!(urlMsisdn);
+    const params    = new URLSearchParams(window.location.search);
+    // Operator sends msisdn WITHOUT country code after subscription
+    const urlMsisdn = params.get("msisdn") || params.get("subid");
+    const saved     = sessionStorage.getItem("msisdn"); // already has 237
 
     if (urlMsisdn) {
-      // Coming from operator portal after subscription
-      checkLogin(urlMsisdn, fromPortal);
+      // User came from operator portal after subscribing
+      // Add 237 and save immediately to cache
+      const cleaned = normalise(urlMsisdn);
+      sessionStorage.setItem("msisdn", cleaned); // save WITH 237
+      // Clean URL immediately
+      const lang = sessionStorage.getItem("lang") || "fr";
+      window.history.replaceState({}, "", lang === "en" ? "/en" : "/fr");
+      // Grant access immediately
+      setMsisdn(cleaned);
+      setIsLoggedIn(true);
+      setIsSubscribed(true);
+      // Verify + fetch detail in background
+      fetchDetail(cleaned);
     } else if (saved) {
-      // Returning user — already saved in sessionStorage
-      checkLogin(saved, false);
+      // Returning user — msisdn already in sessionStorage WITH 237
+      setMsisdn(saved);
+      setIsLoggedIn(true);
+      setIsSubscribed(true);
+      // Verify in background
+      fetchDetail(saved);
     } else {
+      // No msisdn anywhere — guest user
       setIsSubscribed(false);
     }
   }, []);
 
-  // Always ensure 237 country code is present
-  const normalise = (phone: string) => {
-    const digits = phone.replace(/\D/g, "");
-    return digits.startsWith("237") ? digits : `237${digits}`;
-  };
-
-  const applyActive = (cleaned: string, data: any, fromPortal = false) => {
-    // Save msisdn WITH country code to sessionStorage
-    sessionStorage.setItem("msisdn", cleaned);
-    setMsisdn(cleaned);
-    setIsLoggedIn(true);
-    setIsSubscribed(true);
-    setDetail({
-      msisdn:     cleaned,
-      actDate:    data.actDate    || "",
-      renewDate:  data.renewDate  || "",
-      pricePoint: data.pricePoint || "",
-      validity:   data.validity   || "",
-      unsubUrl:   data.unsubUrl   || "",
-    });
-
-    // If coming from portal, clean URL params and redirect to content
-    if (fromPortal) {
-      const lang = sessionStorage.getItem("lang") || "fr";
-      const path = lang === "en" ? "/en" : "/fr";
-      // Replace URL without params so msisdn isn't visible in address bar
-      window.history.replaceState({}, "", path);
-    }
-  };
-
-  const callAPI = async (msisdn: string) => {
-    const res  = await fetch(`${LOGIN_API}?pid=1&msisdn=${encodeURIComponent(msisdn)}`);
-    const text = await res.text();
-    return JSON.parse(text);
-  };
-
-  const checkLogin = async (phone: string, fromPortal = false) => {
-    const cleaned = normalise(phone);
+  // Call API in background to get detail & verify
+  const fetchDetail = async (cleaned: string) => {
     try {
-      const data = await callAPI(cleaned);
+      const res  = await fetch(`${LOGIN_API}?pid=1&msisdn=${encodeURIComponent(cleaned)}`);
+      const text = await res.text();
+      const data = JSON.parse(text);
+
       if (data.response === "ACTIVE") {
-        applyActive(cleaned, data, fromPortal);
+        setDetail({
+          msisdn:     cleaned,
+          actDate:    data.actDate    || "",
+          renewDate:  data.renewDate  || "",
+          pricePoint: data.pricePoint || "",
+          validity:   data.validity   || "",
+          unsubUrl:   data.unsubUrl   || "",
+        });
       } else {
+        // Subscription expired/invalid — clear cache and revoke access
+        sessionStorage.removeItem("msisdn");
+        setMsisdn(null);
+        setIsLoggedIn(false);
         setIsSubscribed(false);
-        // Only redirect to subscription page if coming from portal
-        if (fromPortal && data.redirectURL) {
-          window.location.href = data.redirectURL;
-        }
+        setDetail(null);
+        if (data.redirectURL) window.location.href = data.redirectURL;
       }
     } catch {
-      // On network error, fall open if already saved
-      const saved = sessionStorage.getItem("msisdn");
-      if (saved) {
-        setMsisdn(saved);
-        setIsLoggedIn(true);
-        setIsSubscribed(true);
-      } else {
-        setIsSubscribed(false);
-      }
+      // Network error — keep access (fail open)
     }
   };
 
+  // Manual login from login modal
   const login = async (phone: string): Promise<{ success: boolean; msg: string }> => {
     const cleaned = normalise(phone);
     if (cleaned.length < 12)
       return { success: false, msg: "Please enter a valid 9-digit phone number." };
 
     try {
-      const data = await callAPI(cleaned);
+      const res  = await fetch(`${LOGIN_API}?pid=1&msisdn=${encodeURIComponent(cleaned)}`);
+      const text = await res.text();
+      const data = JSON.parse(text);
+
       if (data.response === "ACTIVE") {
-        applyActive(cleaned, data, false);
+        sessionStorage.setItem("msisdn", cleaned); // save WITH 237
+        setMsisdn(cleaned);
+        setIsLoggedIn(true);
+        setIsSubscribed(true);
+        setDetail({
+          msisdn:     cleaned,
+          actDate:    data.actDate    || "",
+          renewDate:  data.renewDate  || "",
+          pricePoint: data.pricePoint || "",
+          validity:   data.validity   || "",
+          unsubUrl:   data.unsubUrl   || "",
+        });
         return { success: true, msg: "Welcome back!" };
       } else {
+        // INACTIVE — redirect to subscription page
         if (data.redirectURL) {
           window.location.href = data.redirectURL;
           return { success: true, msg: "Redirecting to subscription page..." };

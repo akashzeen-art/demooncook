@@ -36,14 +36,9 @@ export const VideoCard = ({ image, video, title, className = "", children }: Vid
 
   const handleClick = () => {
     if (isSubscribed) {
-      // Subscribed → open video
       setOpen(true);
-    } else if (isLoggedIn) {
-      // Logged in but not subscribed → redirect to activation
-      const id = msisdn || sessionStorage.getItem("msisdn") || "";
-      window.location.href = `http://oncook.co/adpoke/cnt/act?subid=${id}&productcode=${PRODUCT}`;
     } else {
-      // Not logged in → show login modal
+      // Not subscribed → show login modal
       setShowLogin(true);
     }
   };
