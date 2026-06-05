@@ -3,14 +3,20 @@ import { RequestHandler } from "express";
 const LOGIN_API = "http://168.144.122.72/prod/CPLogin/CMMTN";
 const PID       = "1";
 
-// Proxy: GET /api/login?msisdn={msisdn}
-// Calls CM MTN API server-side to avoid CORS
 export const handleLogin: RequestHandler = async (req, res) => {
-  const msisdn = (req.query.msisdn || req.query.subid) as string;
-  if (!msisdn) return res.status(400).json({ response: "INACTIVE", error: "Missing msisdn" });
+  const msisdn = req.query.msisdn as string;
+  const sid    = req.query.sid    as string;
+
+  if (!msisdn && !sid) {
+    return res.status(400).json({ response: "ERROR", error: "Missing msisdn or sid" });
+  }
 
   try {
-    const r    = await fetch(`${LOGIN_API}?pid=${PID}&msisdn=${encodeURIComponent(msisdn)}`);
+    const param = msisdn
+      ? `msisdn=${encodeURIComponent(msisdn)}`
+      : `sid=${encodeURIComponent(sid)}`;
+
+    const r    = await fetch(`${LOGIN_API}?pid=${PID}&${param}`);
     const data = await r.json();
     res.json(data);
   } catch (err) {
