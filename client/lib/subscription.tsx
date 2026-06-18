@@ -12,24 +12,30 @@ export interface SubDetail {
 }
 
 interface SubscriptionContextType {
-  msisdn:        string | null;
-  isSubscribed:  boolean;
-  isLoggedIn:    boolean;
-  isChecking:    boolean;
-  detail:        SubDetail | null;
-  activationUrl: string | null;
-  login:         (phone: string) => Promise<{ success: boolean; msg: string }>;
-  logout:        () => void;
+  msisdn:         string | null;
+  isSubscribed:   boolean;
+  isLoggedIn:     boolean;
+  isChecking:     boolean;
+  isInsufficient: boolean;
+  detail:         SubDetail | null;
+  activationUrl:  string | null;
+  login:          (phone: string) => Promise<{ success: boolean; msg: string; insufficient?: boolean }>;
+  logout:         () => void;
   goToActivation: () => void;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType>({
   msisdn: null, isSubscribed: false, isLoggedIn: false, isChecking: false,
-  detail: null, activationUrl: null,
+  isInsufficient: false, detail: null, activationUrl: null,
   login:  async () => ({ success: false, msg: "" }),
   logout: () => {},
   goToActivation: () => {},
 });
+
+export const INSUFFICIENT_MSG = {
+  en: "Y'ello! Dear Customer, we were unable to activate your service On Cook due to insufficient balance. Please recharge your account and try again.",
+  fr: "Y'ello! Cher client, nous n'avons pas pu activer votre service On Cook en raison d'un solde insuffisant. Veuillez recharger votre compte et réessayer.",
+};
 
 export const useSubscription = () => useContext(SubscriptionContext);
 
@@ -75,6 +81,9 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   const [activationUrl, setActivationUrl]   = useState<string | null>(
     () => sessionStorage.getItem("activationUrl")
   );
+  const [isInsufficient, setIsInsufficient] = useState(
+    () => sessionStorage.getItem("isInsufficient") === "1"
+  );
 
   useEffect(() => {
     const params    = new URLSearchParams(window.location.search);
@@ -116,7 +125,9 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     const withCode = normalise(msisdnVal);
     sessionStorage.setItem("msisdn", withCode);
     sessionStorage.removeItem("activationUrl");
+    sessionStorage.removeItem("isInsufficient");
     setActivationUrl(null);
+    setIsInsufficient(false);
     setMsisdn(withCode);
     setIsLoggedIn(true);
     setIsSubscribed(true);
@@ -131,6 +142,8 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const markInactive = (redirectURL?: string) => {
+    setIsInsufficient(false);
+    sessionStorage.removeItem("isInsufficient");
     setIsLoggedIn(false);
     setIsSubscribed(false);
     setDetail(null);
@@ -140,12 +153,34 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const markInsufficient = (redirectURL?: string) => {
+    setIsLoggedIn(false);
+    setIsSubscribed(false);
+    setDetail(null);
+    setIsInsufficient(true);
+    sessionStorage.setItem("isInsufficient", "1");
+    if (redirectURL) {
+      sessionStorage.setItem("activationUrl", redirectURL);
+      setActivationUrl(redirectURL);
+    }
+  };
+
+  const handleInsufficient = (data: { response?: string; redirectURL?: string }) => {
+    if (data.response === "INSUFFICIENT") {
+      markInsufficient(data.redirectURL);
+      return true;
+    }
+    return false;
+  };
+
   const verifyByMsisdn = async (cleaned: string) => {
     try {
       const res  = await fetch(`${LOGIN_API}?pid=1&msisdn=${encodeURIComponent(cleaned)}`);
       const data = JSON.parse(await res.text());
       if (data.response === "ACTIVE") {
         applyDetail(cleaned, data);
+      } else if (handleInsufficient(data)) {
+        return;
       } else {
         markInactive(data.redirectURL);
       }
@@ -165,7 +200,9 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
           setMsisdn(withCode);
         }
         sessionStorage.removeItem("activationUrl");
+        sessionStorage.removeItem("isInsufficient");
         setActivationUrl(null);
+        setIsInsufficient(false);
         setIsLoggedIn(true);
         setIsSubscribed(true);
         setDetail({
@@ -176,13 +213,15 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
           validity:   data.validity   || "",
           unsubUrl:   data.unsubUrl   || "",
         });
+      } else if (handleInsufficient(data)) {
+        return;
       } else {
         markInactive(data.redirectURL);
       }
     } catch { /* stay on portal */ }
   };
 
-  const login = async (phone: string): Promise<{ success: boolean; msg: string }> => {
+  const login = async (phone: string): Promise<{ success: boolean; msg: string; insufficient?: boolean }> => {
     const cleaned = normalise(phone);
     if (cleaned.length < 12)
       return { success: false, msg: "Please enter a valid 9-digit phone number." };
@@ -194,6 +233,17 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
       if (data.response === "ACTIVE") {
         applyDetail(cleaned, data);
         return { success: true, msg: "Welcome back!" };
+      }
+
+      if (handleInsufficient(data)) {
+        sessionStorage.setItem("msisdn", cleaned);
+        setMsisdn(cleaned);
+        const lang = sessionStorage.getItem("lang") || "fr";
+        return {
+          success: false,
+          insufficient: true,
+          msg: INSUFFICIENT_MSG[lang === "en" ? "en" : "fr"],
+        };
       }
 
       sessionStorage.setItem("msisdn", cleaned);
@@ -216,11 +266,13 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     sessionStorage.removeItem("msisdn");
     sessionStorage.removeItem("sid");
     sessionStorage.removeItem("activationUrl");
+    sessionStorage.removeItem("isInsufficient");
     setMsisdn(null);
     setIsLoggedIn(false);
     setIsSubscribed(false);
     setDetail(null);
     setActivationUrl(null);
+    setIsInsufficient(false);
   };
 
   const goToActivation = () => {
@@ -229,7 +281,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <SubscriptionContext.Provider
-      value={{ msisdn, isSubscribed, isLoggedIn, isChecking, detail, activationUrl, login, logout, goToActivation }}
+      value={{ msisdn, isSubscribed, isLoggedIn, isChecking, isInsufficient, detail, activationUrl, login, logout, goToActivation }}
     >
       {children}
     </SubscriptionContext.Provider>

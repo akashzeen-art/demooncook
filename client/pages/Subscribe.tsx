@@ -2,14 +2,14 @@ import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Play, CheckCircle, ArrowLeft, ArrowRight, AlertCircle, ExternalLink } from "lucide-react";
-import { useSubscription } from "@/lib/subscription";
+import { useSubscription, INSUFFICIENT_MSG } from "@/lib/subscription";
 
 export default function Subscribe() {
   const navigate                    = useNavigate();
   const { login, activationUrl, goToActivation } = useSubscription();
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
-  const [result, setResult]   = useState<{ success: boolean; msg: string } | null>(null);
+  const [result, setResult]   = useState<{ success: boolean; msg: string; insufficient?: boolean } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
@@ -73,9 +73,15 @@ export default function Subscribe() {
 
             {result && (
               <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-                <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm border bg-red-500/10 border-red-500/20 text-red-400">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  {result.msg}
+                <div className={`px-3 py-2.5 rounded-xl text-sm border ${
+                  result.insufficient
+                    ? "bg-amber-500/10 border-amber-500/20 text-amber-300"
+                    : "bg-red-500/10 border-red-500/20 text-red-400"
+                }`}>
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <span className="leading-relaxed">{result.msg}</span>
+                  </div>
                 </div>
                 {activationUrl && (
                   <button
@@ -83,7 +89,8 @@ export default function Subscribe() {
                     onClick={goToActivation}
                     className="w-full flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white font-semibold rounded-xl transition-all text-sm"
                   >
-                    Click here to subscribe <ExternalLink className="w-4 h-4" />
+                    {result.insufficient ? "Recharge and try again" : "Click here to subscribe"}{" "}
+                    <ExternalLink className="w-4 h-4" />
                   </button>
                 )}
               </motion.div>

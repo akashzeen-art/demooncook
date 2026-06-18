@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ArrowRight, CheckCircle, AlertCircle, ExternalLink } from "lucide-react";
-import { useSubscription } from "@/lib/subscription";
+import { useSubscription, INSUFFICIENT_MSG } from "@/lib/subscription";
 
 interface LoginModalProps {
   onClose: () => void;
@@ -9,23 +9,27 @@ interface LoginModalProps {
 
 const T = {
   fr: {
-    subscribe:    "Cliquez ici pour vous abonner",
-    inactiveMsg:  "Votre abonnement n'est pas actif. Cliquez sur n'importe quelle vidéo pour activer.",
+    subscribe:   "Cliquez ici pour vous abonner",
+    recharge:    "Rechargez et réessayez",
+    inactiveMsg: "Votre abonnement n'est pas actif. Cliquez sur n'importe quelle vidéo pour activer.",
   },
   en: {
-    subscribe:    "Click here to subscribe",
-    inactiveMsg:  "Your subscription is not active. Click any video to activate.",
+    subscribe:   "Click here to subscribe",
+    recharge:    "Recharge and try again",
+    inactiveMsg: "Your subscription is not active. Click any video to activate.",
   },
 };
 
 export const LoginModal = ({ onClose }: LoginModalProps) => {
-  const { login, activationUrl, goToActivation, msisdn, isSubscribed } = useSubscription();
+  const { login, activationUrl, goToActivation, msisdn, isSubscribed, isInsufficient } = useSubscription();
   const lang = (sessionStorage.getItem("lang") || "fr") as "fr" | "en";
   const [phone, setPhone]     = useState(() => msisdn ? msisdn.replace(/^237/, "") : "");
   const [loading, setLoading] = useState(false);
-  const [result, setResult]   = useState<{ success: boolean; msg: string } | null>(() =>
-    activationUrl && !isSubscribed ? { success: false, msg: T[lang].inactiveMsg } : null
-  );
+  const [result, setResult]   = useState<{ success: boolean; msg: string; insufficient?: boolean } | null>(() => {
+    if (!activationUrl || isSubscribed) return null;
+    if (isInsufficient) return { success: false, insufficient: true, msg: INSUFFICIENT_MSG[lang] };
+    return { success: false, msg: T[lang].inactiveMsg };
+  });
   const inputRef              = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -108,17 +112,21 @@ export const LoginModal = ({ onClose }: LoginModalProps) => {
                     className="space-y-3"
                   >
                     <div
-                      className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm border ${
+                      className={`px-3 py-2.5 rounded-xl text-sm border ${
                         result.success
                           ? "bg-green-500/10 border-green-500/20 text-green-400"
-                          : "bg-red-500/10 border-red-500/20 text-red-400"
+                          : result.insufficient
+                            ? "bg-amber-500/10 border-amber-500/20 text-amber-300"
+                            : "bg-red-500/10 border-red-500/20 text-red-400"
                       }`}
                     >
-                      {result.success
-                        ? <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                        : <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                      }
-                      {result.msg}
+                      <div className="flex items-start gap-2">
+                        {result.success
+                          ? <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                          : <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                        }
+                        <span className="leading-relaxed">{result.msg}</span>
+                      </div>
                     </div>
                     {!result.success && activationUrl && (
                       <button
@@ -126,7 +134,8 @@ export const LoginModal = ({ onClose }: LoginModalProps) => {
                         onClick={goToActivation}
                         className="w-full flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white font-semibold rounded-xl transition-all text-sm"
                       >
-                        {T[lang].subscribe} <ExternalLink className="w-4 h-4" />
+                        {result.insufficient ? T[lang].recharge : T[lang].subscribe}{" "}
+                        <ExternalLink className="w-4 h-4" />
                       </button>
                     )}
                   </motion.div>
