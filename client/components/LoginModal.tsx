@@ -1,17 +1,31 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ArrowRight, CheckCircle, AlertCircle } from "lucide-react";
+import { X, ArrowRight, CheckCircle, AlertCircle, ExternalLink } from "lucide-react";
 import { useSubscription } from "@/lib/subscription";
 
 interface LoginModalProps {
   onClose: () => void;
 }
 
+const T = {
+  fr: {
+    subscribe:    "Cliquez ici pour vous abonner",
+    inactiveMsg:  "Votre abonnement n'est pas actif. Cliquez sur n'importe quelle vidéo pour activer.",
+  },
+  en: {
+    subscribe:    "Click here to subscribe",
+    inactiveMsg:  "Your subscription is not active. Click any video to activate.",
+  },
+};
+
 export const LoginModal = ({ onClose }: LoginModalProps) => {
-  const { login }             = useSubscription();
-  const [phone, setPhone]     = useState("");
+  const { login, activationUrl, goToActivation, msisdn, isSubscribed } = useSubscription();
+  const lang = (sessionStorage.getItem("lang") || "fr") as "fr" | "en";
+  const [phone, setPhone]     = useState(() => msisdn ? msisdn.replace(/^237/, "") : "");
   const [loading, setLoading] = useState(false);
-  const [result, setResult]   = useState<{ success: boolean; msg: string } | null>(null);
+  const [result, setResult]   = useState<{ success: boolean; msg: string } | null>(() =>
+    activationUrl && !isSubscribed ? { success: false, msg: T[lang].inactiveMsg } : null
+  );
   const inputRef              = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -91,17 +105,30 @@ export const LoginModal = ({ onClose }: LoginModalProps) => {
                     initial={{ opacity: 0, y: -8 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
-                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm border ${
-                      result.success
-                        ? "bg-green-500/10 border-green-500/20 text-green-400"
-                        : "bg-red-500/10 border-red-500/20 text-red-400"
-                    }`}
+                    className="space-y-3"
                   >
-                    {result.success
-                      ? <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                      : <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                    }
-                    {result.msg}
+                    <div
+                      className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm border ${
+                        result.success
+                          ? "bg-green-500/10 border-green-500/20 text-green-400"
+                          : "bg-red-500/10 border-red-500/20 text-red-400"
+                      }`}
+                    >
+                      {result.success
+                        ? <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                        : <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                      }
+                      {result.msg}
+                    </div>
+                    {!result.success && activationUrl && (
+                      <button
+                        type="button"
+                        onClick={goToActivation}
+                        className="w-full flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white font-semibold rounded-xl transition-all text-sm"
+                      >
+                        {T[lang].subscribe} <ExternalLink className="w-4 h-4" />
+                      </button>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>

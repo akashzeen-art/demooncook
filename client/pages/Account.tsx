@@ -23,7 +23,6 @@ const T = {
     days:           "jour(s)",
     cancelMsg:      "Voulez-vous annuler votre abonnement ?",
     unsubscribe:    "Se désabonner",
-    logout:         "Déconnexion",
   },
   en: {
     back:           "Back",
@@ -40,12 +39,11 @@ const T = {
     days:           "day(s)",
     cancelMsg:      "Want to cancel your subscription?",
     unsubscribe:    "Unsubscribe",
-    logout:         "Logout",
   },
 };
 
 export default function Account() {
-  const { detail, msisdn, isSubscribed, logout } = useSubscription();
+  const { detail, msisdn, isSubscribed } = useSubscription();
   const navigate = useNavigate();
   const lang     = (sessionStorage.getItem("lang") || "fr") as "fr" | "en";
   const t        = T[lang];
@@ -118,9 +116,6 @@ export default function Account() {
                 </button>
               </div>
             )}
-            <button onClick={() => { logout(); navigate("/"); }} className="flex items-center gap-2 px-5 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white rounded-xl text-sm transition-all">
-              <LogOut className="w-4 h-4" /> {t.logout}
-            </button>
           </div>
 
         </motion.div>

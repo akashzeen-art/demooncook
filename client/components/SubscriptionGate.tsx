@@ -2,10 +2,9 @@ import { motion } from "framer-motion";
 import { useSubscription } from "@/lib/subscription";
 
 export const SubscriptionGate = ({ children }: { children: React.ReactNode }) => {
-  const { isSubscribed, isLoggedIn } = useSubscription();
+  const { isChecking } = useSubscription();
 
-  // Checking subscription status
-  if (isLoggedIn && isSubscribed === null) {
+  if (isChecking) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <motion.div className="flex flex-col items-center gap-5" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>

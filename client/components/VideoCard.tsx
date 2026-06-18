@@ -2,9 +2,7 @@ import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import { LoginModal } from "@/components/LoginModal";
-import { useSubscription } from "@/lib/subscription";
-
-const PRODUCT = "RCT";
+import { useContentGate } from "@/lib/subscription";
 
 interface VideoCardProps {
   image: string;
@@ -19,7 +17,7 @@ export const VideoCard = ({ image, video, title, className = "", children }: Vid
   const [hovering, setHovering]   = useState(false);
   const [open, setOpen]           = useState(false);
   const [showLogin, setShowLogin] = useState(false);
-  const { isSubscribed, isLoggedIn, msisdn } = useSubscription();
+  const { requestAccess }         = useContentGate();
 
   const handleMouseEnter = () => {
     setHovering(true);
@@ -35,12 +33,10 @@ export const VideoCard = ({ image, video, title, className = "", children }: Vid
   };
 
   const handleClick = () => {
-    if (isSubscribed) {
-      setOpen(true);
-    } else {
-      // Not subscribed → show login modal
-      setShowLogin(true);
-    }
+    requestAccess({
+      onGranted: () => setOpen(true),
+      onLogin:   () => setShowLogin(true),
+    });
   };
 
   return (

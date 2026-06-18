@@ -12,21 +12,49 @@ export interface SubDetail {
 }
 
 interface SubscriptionContextType {
-  msisdn:       string | null;
-  isSubscribed: boolean | null;
-  isLoggedIn:   boolean;
-  detail:       SubDetail | null;
-  login:        (phone: string) => Promise<{ success: boolean; msg: string }>;
-  logout:       () => void;
+  msisdn:        string | null;
+  isSubscribed:  boolean;
+  isLoggedIn:    boolean;
+  isChecking:    boolean;
+  detail:        SubDetail | null;
+  activationUrl: string | null;
+  login:         (phone: string) => Promise<{ success: boolean; msg: string }>;
+  logout:        () => void;
+  goToActivation: () => void;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType>({
-  msisdn: null, isSubscribed: null, isLoggedIn: false, detail: null,
+  msisdn: null, isSubscribed: false, isLoggedIn: false, isChecking: false,
+  detail: null, activationUrl: null,
   login:  async () => ({ success: false, msg: "" }),
   logout: () => {},
+  goToActivation: () => {},
 });
 
 export const useSubscription = () => useContext(SubscriptionContext);
+
+const hasPendingCheck = () => {
+  const params = new URLSearchParams(window.location.search);
+  return !!(
+    params.get("msisdn") || params.get("subid") || params.get("sid") ||
+    sessionStorage.getItem("msisdn")
+  );
+};
+
+export const useContentGate = () => {
+  const { isSubscribed, isChecking } = useSubscription();
+
+  const requestAccess = (handlers: {
+    onGranted: () => void;
+    onLogin:   () => void;
+  }) => {
+    if (isChecking) return;
+    if (isSubscribed) handlers.onGranted();
+    else handlers.onLogin();
+  };
+
+  return { requestAccess, isChecking };
+};
 
 const normalise = (phone: string) => {
   const digits = phone.replace(/\D/g, "");
@@ -39,10 +67,14 @@ const cleanURL = () => {
 };
 
 export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
-  const [msisdn,       setMsisdn]       = useState<string | null>(null);
-  const [isSubscribed, setIsSubscribed] = useState<boolean | null>(null);
-  const [isLoggedIn,   setIsLoggedIn]   = useState<boolean>(false);
-  const [detail,       setDetail]       = useState<SubDetail | null>(null);
+  const [msisdn,        setMsisdn]        = useState<string | null>(null);
+  const [isSubscribed,  setIsSubscribed]    = useState(false);
+  const [isLoggedIn,    setIsLoggedIn]      = useState(false);
+  const [isChecking,    setIsChecking]      = useState(hasPendingCheck);
+  const [detail,        setDetail]          = useState<SubDetail | null>(null);
+  const [activationUrl, setActivationUrl]   = useState<string | null>(
+    () => sessionStorage.getItem("activationUrl")
+  );
 
   useEffect(() => {
     const params    = new URLSearchParams(window.location.search);
@@ -50,32 +82,32 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     const urlSid    = params.get("sid");
     const saved     = sessionStorage.getItem("msisdn");
 
-    if (urlMsisdn) {
-      // ?msisdn= in URL (with or without sid) — add 237 and grant access immediately
-      const cleaned = normalise(urlMsisdn);
-      sessionStorage.setItem("msisdn", cleaned);
-      setMsisdn(cleaned);
-      setIsLoggedIn(true);
-      setIsSubscribed(true);
-      cleanURL();
-      fetchDetailByMsisdn(cleaned);
+    const runCheck = async () => {
+      setIsChecking(true);
 
-    } else if (urlSid) {
-      // ?sid= only — grant access immediately, get msisdn in background
-      sessionStorage.setItem("sid", urlSid);
-      setIsLoggedIn(true);
-      setIsSubscribed(true);
-      cleanURL();
-      fetchDetailBySid(urlSid);
+      if (urlMsisdn) {
+        const cleaned = normalise(urlMsisdn);
+        sessionStorage.setItem("msisdn", cleaned);
+        setMsisdn(cleaned);
+        if (urlSid) sessionStorage.setItem("sid", urlSid);
+        cleanURL();
+        await verifyByMsisdn(cleaned);
+      } else if (urlSid) {
+        sessionStorage.setItem("sid", urlSid);
+        cleanURL();
+        await verifyBySid(urlSid);
+      } else if (saved) {
+        setMsisdn(saved);
+        await verifyByMsisdn(saved);
+      }
 
-    } else if (saved) {
-      // Returning user — msisdn in sessionStorage
-      setMsisdn(saved);
-      setIsLoggedIn(true);
-      setIsSubscribed(true);
-      fetchDetailByMsisdn(saved);
+      setIsChecking(false);
+    };
 
+    if (urlMsisdn || urlSid || saved) {
+      runCheck();
     } else {
+      setIsChecking(false);
       setIsSubscribed(false);
     }
   }, []);
@@ -83,7 +115,11 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   const applyDetail = (msisdnVal: string, data: any) => {
     const withCode = normalise(msisdnVal);
     sessionStorage.setItem("msisdn", withCode);
+    sessionStorage.removeItem("activationUrl");
+    setActivationUrl(null);
     setMsisdn(withCode);
+    setIsLoggedIn(true);
+    setIsSubscribed(true);
     setDetail({
       msisdn:     withCode,
       actDate:    data.actDate    || "",
@@ -94,41 +130,44 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const revokeAccess = (redirectURL?: string) => {
-    sessionStorage.removeItem("msisdn");
-    sessionStorage.removeItem("sid");
-    setMsisdn(null);
+  const markInactive = (redirectURL?: string) => {
     setIsLoggedIn(false);
     setIsSubscribed(false);
     setDetail(null);
-    if (redirectURL) window.location.href = redirectURL;
+    if (redirectURL) {
+      sessionStorage.setItem("activationUrl", redirectURL);
+      setActivationUrl(redirectURL);
+    }
   };
 
-  const fetchDetailByMsisdn = async (cleaned: string) => {
+  const verifyByMsisdn = async (cleaned: string) => {
     try {
       const res  = await fetch(`${LOGIN_API}?pid=1&msisdn=${encodeURIComponent(cleaned)}`);
       const data = JSON.parse(await res.text());
       if (data.response === "ACTIVE") {
         applyDetail(cleaned, data);
       } else {
-        revokeAccess(data.redirectURL);
+        markInactive(data.redirectURL);
       }
-    } catch { /* fail open */ }
+    } catch { /* stay on portal */ }
   };
 
-  const fetchDetailBySid = async (sid: string) => {
+  const verifyBySid = async (sid: string) => {
     try {
       const res  = await fetch(`${LOGIN_API}?pid=1&sid=${encodeURIComponent(sid)}`);
       const data = JSON.parse(await res.text());
       if (data.response === "ACTIVE") {
-        // Extract msisdn from unsubUrl if present e.g. unsub?pid=1&msisdn=237...
-        const match = (data.unsubUrl || "").match(/msisdn=(\d+)/);
-        const m     = match ? match[1] : "";
+        const match    = (data.unsubUrl || "").match(/msisdn=(\d+)/);
+        const m        = match ? match[1] : "";
         const withCode = m ? normalise(m) : "";
         if (withCode) {
           sessionStorage.setItem("msisdn", withCode);
           setMsisdn(withCode);
         }
+        sessionStorage.removeItem("activationUrl");
+        setActivationUrl(null);
+        setIsLoggedIn(true);
+        setIsSubscribed(true);
         setDetail({
           msisdn:     withCode || sid,
           actDate:    data.actDate    || "",
@@ -138,9 +177,9 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
           unsubUrl:   data.unsubUrl   || "",
         });
       } else {
-        revokeAccess(data.redirectURL);
+        markInactive(data.redirectURL);
       }
-    } catch { /* fail open */ }
+    } catch { /* stay on portal */ }
   };
 
   const login = async (phone: string): Promise<{ success: boolean; msg: string }> => {
@@ -153,19 +192,20 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
       const data = JSON.parse(await res.text());
 
       if (data.response === "ACTIVE") {
-        sessionStorage.setItem("msisdn", cleaned);
-        setMsisdn(cleaned);
-        setIsLoggedIn(true);
-        setIsSubscribed(true);
         applyDetail(cleaned, data);
         return { success: true, msg: "Welcome back!" };
-      } else {
-        if (data.redirectURL) {
-          window.location.href = data.redirectURL;
-          return { success: true, msg: "Redirecting to subscription page..." };
-        }
-        return { success: false, msg: "You are not subscribed. Please subscribe to continue." };
       }
+
+      sessionStorage.setItem("msisdn", cleaned);
+      setMsisdn(cleaned);
+      markInactive(data.redirectURL);
+      const lang = sessionStorage.getItem("lang") || "fr";
+      return {
+        success: false,
+        msg: lang === "en"
+          ? "Your subscription is not active. Click any video to activate."
+          : "Votre abonnement n'est pas actif. Cliquez sur n'importe quelle vidéo pour activer.",
+      };
     } catch (e) {
       console.error("Login error:", e);
       return { success: false, msg: "Network error. Please check your connection and try again." };
@@ -175,14 +215,22 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     sessionStorage.removeItem("msisdn");
     sessionStorage.removeItem("sid");
+    sessionStorage.removeItem("activationUrl");
     setMsisdn(null);
     setIsLoggedIn(false);
     setIsSubscribed(false);
     setDetail(null);
+    setActivationUrl(null);
+  };
+
+  const goToActivation = () => {
+    if (activationUrl) window.location.href = activationUrl;
   };
 
   return (
-    <SubscriptionContext.Provider value={{ msisdn, isSubscribed, isLoggedIn, detail, login, logout }}>
+    <SubscriptionContext.Provider
+      value={{ msisdn, isSubscribed, isLoggedIn, isChecking, detail, activationUrl, login, logout, goToActivation }}
+    >
       {children}
     </SubscriptionContext.Provider>
   );

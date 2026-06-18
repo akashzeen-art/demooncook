@@ -4,7 +4,7 @@ import { Play, Info } from "lucide-react";
 import { VIDEOS } from "@/lib/videos";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import { LoginModal } from "@/components/LoginModal";
-import { useSubscription } from "@/lib/subscription";
+import { useContentGate } from "@/lib/subscription";
 import { createPortal } from "react-dom";
 
 const BANNERS = [
@@ -19,7 +19,7 @@ export const HeroSection = () => {
   const [index, setIndex]         = useState(0);
   const [open, setOpen]           = useState(false);
   const [showLogin, setShowLogin] = useState(false);
-  const { isSubscribed }          = useSubscription();
+  const { requestAccess }         = useContentGate();
 
   useEffect(() => {
     const t = setInterval(() => setIndex((p) => (p + 1) % BANNERS.length), 8000);
@@ -68,7 +68,10 @@ export const HeroSection = () => {
             <div className="flex gap-3 pt-1">
               <motion.button
                 whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                onClick={() => isSubscribed ? setOpen(true) : setShowLogin(true)}
+                onClick={() => requestAccess({
+                  onGranted: () => setOpen(true),
+                  onLogin:   () => setShowLogin(true),
+                })}
                 className="flex items-center gap-2 px-5 py-3 md:px-8 md:py-4 bg-white text-black font-bold rounded-lg hover:bg-gray-200 transition-all text-sm md:text-base">
                 <Play className="w-4 h-4 md:w-5 md:h-5 fill-black" /> Regarder la vidéo
               </motion.button>
