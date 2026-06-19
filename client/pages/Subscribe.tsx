@@ -6,7 +6,7 @@ import { useSubscription, INSUFFICIENT_MSG } from "@/lib/subscription";
 
 export default function Subscribe() {
   const navigate                    = useNavigate();
-  const { login, activationUrl, goToActivation } = useSubscription();
+  const { login, activationUrl, rechargeUrl, goToActivation, goToRecharge } = useSubscription();
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult]   = useState<{ success: boolean; msg: string; insufficient?: boolean } | null>(null);
@@ -80,19 +80,27 @@ export default function Subscribe() {
                 }`}>
                   <div className="flex items-start gap-2">
                     <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                    <span className="leading-relaxed">{result.msg}</span>
+                    <span className="leading-relaxed whitespace-pre-line">{result.msg}</span>
                   </div>
                 </div>
-                {activationUrl && (
+                {result.insufficient ? (
+                  <button
+                    type="button"
+                    onClick={goToRecharge}
+                    disabled={!rechargeUrl}
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white font-semibold rounded-xl transition-all text-sm disabled:opacity-40"
+                  >
+                    Recharge and try again <ExternalLink className="w-4 h-4" />
+                  </button>
+                ) : activationUrl ? (
                   <button
                     type="button"
                     onClick={goToActivation}
                     className="w-full flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white font-semibold rounded-xl transition-all text-sm"
                   >
-                    {result.insufficient ? "Recharge and try again" : "Click here to subscribe"}{" "}
-                    <ExternalLink className="w-4 h-4" />
+                    Click here to subscribe <ExternalLink className="w-4 h-4" />
                   </button>
-                )}
+                ) : null}
               </motion.div>
             )}
 

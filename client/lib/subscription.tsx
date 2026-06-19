@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 
 const LOGIN_API = "/api/login";
 const UNSUB_API = "/api/unsub";
+export const LANDING_URL = "http://168.144.122.72/prod/LP/landing?creatid=1&hash=CMMTN";
 
 export interface SubDetail {
   msisdn:     string;
@@ -12,32 +13,51 @@ export interface SubDetail {
   unsubUrl:   string;
 }
 
+export interface LoginApiResponse {
+  response:    string;
+  redirectURL?: string;
+  actDate?:    string;
+  renewDate?:  string;
+  pricePoint?: string;
+  validity?:   string;
+  unsubUrl?:   string;
+}
+
 interface SubscriptionContextType {
   msisdn:         string | null;
   isSubscribed:   boolean;
   isLoggedIn:     boolean;
   isChecking:     boolean;
   isInsufficient: boolean;
+  isInactive:     boolean;
   detail:         SubDetail | null;
   activationUrl:  string | null;
+  rechargeUrl:    string | null;
   login:          (phone: string) => Promise<{ success: boolean; msg: string; insufficient?: boolean }>;
   unsubscribe:    () => Promise<{ success: boolean; msg: string }>;
   logout:         () => void;
   goToActivation: () => void;
+  goToRecharge:   () => void;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType>({
   msisdn: null, isSubscribed: false, isLoggedIn: false, isChecking: false,
-  isInsufficient: false, detail: null, activationUrl: null,
+  isInsufficient: false, isInactive: false, detail: null, activationUrl: null, rechargeUrl: null,
   login:  async () => ({ success: false, msg: "" }),
   unsubscribe: async () => ({ success: false, msg: "" }),
   logout: () => {},
   goToActivation: () => {},
+  goToRecharge: () => {},
 });
 
 export const INSUFFICIENT_MSG = {
-  en: "Y'ello! Dear Customer, we were unable to activate your service On Cook due to insufficient balance. Please recharge your account and try again.",
-  fr: "Y'ello! Cher client, nous n'avons pas pu activer votre service On Cook en raison d'un solde insuffisant. Veuillez recharger votre compte et réessayer.",
+  en: "Y'ello! Dear Customer, we were unable to activate your service On Cook due to insufficient balance.\nPlease recharge your account and try again.",
+  fr: "Y'ello! Cher client, nous n'avons pas pu activer votre service On Cook en raison d'un solde insuffisant.\nVeuillez recharger votre compte et réessayer.",
+};
+
+export const INACTIVE_MSG = {
+  en: "Your subscription is not active. Click below to activate.",
+  fr: "Votre abonnement n'est pas actif. Cliquez ci-dessous pour activer.",
 };
 
 export const UNSUB_SUCCESS_MSG = {
@@ -59,14 +79,14 @@ const hasPendingCheck = () => {
 };
 
 export const useContentGate = () => {
-  const { isSubscribed, isChecking } = useSubscription();
+  const { isSubscribed, isChecking, isInsufficient, isInactive } = useSubscription();
 
   const requestAccess = (handlers: {
     onGranted: () => void;
     onLogin:   () => void;
   }) => {
     if (isChecking) return;
-    if (isSubscribed) handlers.onGranted();
+    if (isSubscribed && !isInsufficient && !isInactive) handlers.onGranted();
     else handlers.onLogin();
   };
 
@@ -83,6 +103,26 @@ const cleanURL = () => {
   window.history.replaceState({}, "", lang === "en" ? "/en" : "/fr");
 };
 
+const isFromLanding = () => {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("creatid") || params.get("hash")) return true;
+  try {
+    const ref = document.referrer;
+    return ref.includes("/LP/landing") || ref.includes("/prod/LP/landing");
+  } catch {
+    return false;
+  }
+};
+
+const parseLoginResponse = (text: string): LoginApiResponse => {
+  const data = JSON.parse(text.trim()) as LoginApiResponse;
+  return {
+    ...data,
+    response:    typeof data.response === "string" ? data.response.toUpperCase().trim() : "",
+    redirectURL: data.redirectURL || (data as { redirectUrl?: string }).redirectUrl,
+  };
+};
+
 export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   const [msisdn,        setMsisdn]        = useState<string | null>(null);
   const [isSubscribed,  setIsSubscribed]    = useState(false);
@@ -92,8 +132,14 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   const [activationUrl, setActivationUrl]   = useState<string | null>(
     () => sessionStorage.getItem("activationUrl")
   );
+  const [rechargeUrl, setRechargeUrl]       = useState<string | null>(
+    () => sessionStorage.getItem("rechargeUrl")
+  );
   const [isInsufficient, setIsInsufficient] = useState(
     () => sessionStorage.getItem("isInsufficient") === "1"
+  );
+  const [isInactive, setIsInactive] = useState(
+    () => sessionStorage.getItem("isInactive") === "1"
   );
 
   useEffect(() => {
@@ -101,9 +147,21 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     const urlMsisdn = params.get("msisdn") || params.get("subid");
     const urlSid    = params.get("sid");
     const saved     = sessionStorage.getItem("msisdn");
+    const fromLanding = isFromLanding();
 
     const runCheck = async () => {
       setIsChecking(true);
+      setIsSubscribed(false);
+      setIsLoggedIn(false);
+      sessionStorage.removeItem("isInactive");
+      sessionStorage.removeItem("isInsufficient");
+      sessionStorage.removeItem("activationUrl");
+      sessionStorage.removeItem("rechargeUrl");
+      setIsInactive(false);
+      setIsInsufficient(false);
+      setActivationUrl(null);
+      setRechargeUrl(null);
+      setDetail(null);
 
       if (urlMsisdn) {
         const cleaned = normalise(urlMsisdn);
@@ -124,21 +182,34 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
       setIsChecking(false);
     };
 
-    if (urlMsisdn || urlSid || saved) {
+    if (urlMsisdn || urlSid || saved || fromLanding) {
       runCheck();
     } else {
       setIsChecking(false);
       setIsSubscribed(false);
     }
+
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (!e.persisted) return;
+      const stored = sessionStorage.getItem("msisdn");
+      const sid    = sessionStorage.getItem("sid");
+      if (stored || sid) runCheck();
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
   }, []);
 
   const applyDetail = (msisdnVal: string, data: any) => {
     const withCode = normalise(msisdnVal);
     sessionStorage.setItem("msisdn", withCode);
     sessionStorage.removeItem("activationUrl");
+    sessionStorage.removeItem("rechargeUrl");
     sessionStorage.removeItem("isInsufficient");
+    sessionStorage.removeItem("isInactive");
     setActivationUrl(null);
+    setRechargeUrl(null);
     setIsInsufficient(false);
+    setIsInactive(false);
     setMsisdn(withCode);
     setIsLoggedIn(true);
     setIsSubscribed(true);
@@ -155,6 +226,10 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   const markInactive = (redirectURL?: string) => {
     setIsInsufficient(false);
     sessionStorage.removeItem("isInsufficient");
+    sessionStorage.removeItem("rechargeUrl");
+    setRechargeUrl(null);
+    setIsInactive(true);
+    sessionStorage.setItem("isInactive", "1");
     setIsLoggedIn(false);
     setIsSubscribed(false);
     setDetail(null);
@@ -165,18 +240,21 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const markInsufficient = (redirectURL?: string) => {
+    const url = redirectURL || LANDING_URL;
+    setIsInactive(false);
+    sessionStorage.removeItem("isInactive");
     setIsLoggedIn(false);
     setIsSubscribed(false);
     setDetail(null);
     setIsInsufficient(true);
     sessionStorage.setItem("isInsufficient", "1");
-    if (redirectURL) {
-      sessionStorage.setItem("activationUrl", redirectURL);
-      setActivationUrl(redirectURL);
-    }
+    sessionStorage.removeItem("activationUrl");
+    setActivationUrl(null);
+    sessionStorage.setItem("rechargeUrl", url);
+    setRechargeUrl(url);
   };
 
-  const handleInsufficient = (data: { response?: string; redirectURL?: string }) => {
+  const handleInsufficient = (data: LoginApiResponse) => {
     if (data.response === "INSUFFICIENT") {
       markInsufficient(data.redirectURL);
       return true;
@@ -187,7 +265,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   const verifyByMsisdn = async (cleaned: string) => {
     try {
       const res  = await fetch(`${LOGIN_API}?pid=1&msisdn=${encodeURIComponent(cleaned)}`);
-      const data = JSON.parse(await res.text());
+      const data = parseLoginResponse(await res.text());
       if (data.response === "ACTIVE") {
         applyDetail(cleaned, data);
       } else if (handleInsufficient(data)) {
@@ -201,7 +279,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   const verifyBySid = async (sid: string) => {
     try {
       const res  = await fetch(`${LOGIN_API}?pid=1&sid=${encodeURIComponent(sid)}`);
-      const data = JSON.parse(await res.text());
+      const data = parseLoginResponse(await res.text());
       if (data.response === "ACTIVE") {
         const match    = (data.unsubUrl || "").match(/msisdn=(\d+)/);
         const m        = match ? match[1] : "";
@@ -211,9 +289,13 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
           setMsisdn(withCode);
         }
         sessionStorage.removeItem("activationUrl");
+        sessionStorage.removeItem("rechargeUrl");
         sessionStorage.removeItem("isInsufficient");
+        sessionStorage.removeItem("isInactive");
         setActivationUrl(null);
+        setRechargeUrl(null);
         setIsInsufficient(false);
+        setIsInactive(false);
         setIsLoggedIn(true);
         setIsSubscribed(true);
         setDetail({
@@ -239,7 +321,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       const res  = await fetch(`${LOGIN_API}?pid=1&msisdn=${encodeURIComponent(cleaned)}`);
-      const data = JSON.parse(await res.text());
+      const data = parseLoginResponse(await res.text());
 
       if (data.response === "ACTIVE") {
         applyDetail(cleaned, data);
@@ -263,9 +345,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
       const lang = sessionStorage.getItem("lang") || "fr";
       return {
         success: false,
-        msg: lang === "en"
-          ? "Your subscription is not active. Click below to activate."
-          : "Votre abonnement n'est pas actif. Cliquez ci-dessous pour activer.",
+        msg: INACTIVE_MSG[lang === "en" ? "en" : "fr"],
       };
     } catch (e) {
       console.error("Login error:", e);
@@ -277,13 +357,17 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     sessionStorage.removeItem("msisdn");
     sessionStorage.removeItem("sid");
     sessionStorage.removeItem("activationUrl");
+    sessionStorage.removeItem("rechargeUrl");
     sessionStorage.removeItem("isInsufficient");
+    sessionStorage.removeItem("isInactive");
     setMsisdn(null);
     setIsLoggedIn(false);
     setIsSubscribed(false);
     setDetail(null);
     setActivationUrl(null);
+    setRechargeUrl(null);
     setIsInsufficient(false);
+    setIsInactive(false);
   };
 
   const unsubscribe = async (): Promise<{ success: boolean; msg: string }> => {
@@ -331,9 +415,18 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     if (activationUrl) window.location.href = activationUrl;
   };
 
+  const goToRecharge = () => {
+    const url = rechargeUrl || LANDING_URL;
+    window.location.href = url;
+  };
+
   return (
     <SubscriptionContext.Provider
-      value={{ msisdn, isSubscribed, isLoggedIn, isChecking, isInsufficient, detail, activationUrl, login, unsubscribe, logout, goToActivation }}
+      value={{
+        msisdn, isSubscribed, isLoggedIn, isChecking, isInsufficient, isInactive,
+        detail, activationUrl, rechargeUrl,
+        login, unsubscribe, logout, goToActivation, goToRecharge,
+      }}
     >
       {children}
     </SubscriptionContext.Provider>

@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SubscriptionProvider } from "@/lib/subscription";
 import { SubscriptionGate } from "@/components/SubscriptionGate";
+import { SubscriptionPrompt } from "@/components/SubscriptionPrompt";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import Index from "./pages/Index";
 import IndexEn from "./pages/IndexEn";
@@ -24,6 +25,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <SubscriptionProvider>
+          <SubscriptionPrompt />
           <ScrollToTop />
           <Routes>
             <Route path="/account"   element={<Account />} />
