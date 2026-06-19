@@ -264,8 +264,8 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
       return {
         success: false,
         msg: lang === "en"
-          ? "Your subscription is not active. Click any video to activate."
-          : "Votre abonnement n'est pas actif. Cliquez sur n'importe quelle vidéo pour activer.",
+          ? "Your subscription is not active. Click below to activate."
+          : "Votre abonnement n'est pas actif. Cliquez ci-dessous pour activer.",
       };
     } catch (e) {
       console.error("Login error:", e);

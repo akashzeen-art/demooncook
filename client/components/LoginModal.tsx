@@ -11,12 +11,12 @@ const T = {
   fr: {
     subscribe:   "Cliquez ici pour vous abonner",
     recharge:    "Rechargez et réessayez",
-    inactiveMsg: "Votre abonnement n'est pas actif. Cliquez sur n'importe quelle vidéo pour activer.",
+    inactiveMsg: "Votre abonnement n'est pas actif. Cliquez ci-dessous pour activer.",
   },
   en: {
     subscribe:   "Click here to subscribe",
     recharge:    "Recharge and try again",
-    inactiveMsg: "Your subscription is not active. Click any video to activate.",
+    inactiveMsg: "Your subscription is not active. Click below to activate.",
   },
 };
 
