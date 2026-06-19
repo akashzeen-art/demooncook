@@ -1,6 +1,7 @@
-import { motion } from "framer-motion";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { User, Calendar, Phone, Shield, DollarSign, LogOut, ArrowLeft, RefreshCw } from "lucide-react";
+import { User, Calendar, Phone, Shield, DollarSign, LogOut, ArrowLeft, RefreshCw, CheckCircle, AlertCircle } from "lucide-react";
 import { useSubscription } from "@/lib/subscription";
 import { Navbar } from "@/components/Navbar";
 import { NavbarEn } from "@/components/en/NavbarEn";
@@ -23,6 +24,7 @@ const T = {
     days:           "jour(s)",
     cancelMsg:      "Voulez-vous annuler votre abonnement ?",
     unsubscribe:    "Se désabonner",
+    unsubscribing:  "Désabonnement...",
   },
   en: {
     back:           "Back",
@@ -39,17 +41,24 @@ const T = {
     days:           "day(s)",
     cancelMsg:      "Want to cancel your subscription?",
     unsubscribe:    "Unsubscribe",
+    unsubscribing:  "Unsubscribing...",
   },
 };
 
 export default function Account() {
-  const { detail, msisdn, isSubscribed } = useSubscription();
-  const navigate = useNavigate();
-  const lang     = (sessionStorage.getItem("lang") || "fr") as "fr" | "en";
-  const t        = T[lang];
+  const { detail, msisdn, isSubscribed, unsubscribe } = useSubscription();
+  const navigate   = useNavigate();
+  const lang       = (sessionStorage.getItem("lang") || "fr") as "fr" | "en";
+  const t          = T[lang];
+  const [loading, setLoading] = useState(false);
+  const [result, setResult]   = useState<{ success: boolean; msg: string } | null>(null);
 
-  const handleUnsub = () => {
-    if (detail?.unsubUrl) window.location.href = detail.unsubUrl;
+  const handleUnsub = async () => {
+    setLoading(true);
+    setResult(null);
+    const res = await unsubscribe();
+    setLoading(false);
+    setResult(res);
   };
 
   return (
@@ -63,7 +72,6 @@ export default function Account() {
             <ArrowLeft className="w-4 h-4" /> {t.back}
           </button>
 
-          {/* Header */}
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 bg-red-600/20 border border-red-500/30 rounded-full flex items-center justify-center">
               <User className="w-7 h-7 text-red-400" />
@@ -74,7 +82,27 @@ export default function Account() {
             </div>
           </div>
 
-          {/* Status badge */}
+          <AnimatePresence>
+            {result && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className={`flex items-start gap-3 px-4 py-3 rounded-xl text-sm border ${
+                  result.success
+                    ? "bg-green-500/10 border-green-500/20 text-green-400"
+                    : "bg-red-500/10 border-red-500/20 text-red-400"
+                }`}
+              >
+                {result.success
+                  ? <CheckCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                  : <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                }
+                <span className="leading-relaxed">{result.msg}</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <div className={`p-4 rounded-2xl border flex items-center gap-3 ${isSubscribed ? "bg-green-500/5 border-green-500/20" : "bg-red-500/5 border-red-500/20"}`}>
             <div className={`w-3 h-3 rounded-full animate-pulse ${isSubscribed ? "bg-green-500" : "bg-red-500"}`} />
             <span className={`font-semibold text-sm ${isSubscribed ? "text-green-400" : "text-red-400"}`}>
@@ -82,7 +110,6 @@ export default function Account() {
             </span>
           </div>
 
-          {/* Subscription details */}
           {detail && (
             <div className="bg-zinc-900 border border-white/10 rounded-2xl overflow-hidden">
               <div className="px-5 py-3 border-b border-white/5">
@@ -106,13 +133,17 @@ export default function Account() {
             </div>
           )}
 
-          {/* Actions */}
           <div className="pt-4 border-t border-white/10 space-y-3">
-            {isSubscribed && detail?.unsubUrl && (
+            {isSubscribed && msisdn && (
               <div>
                 <p className="text-gray-500 text-sm mb-3">{t.cancelMsg}</p>
-                <button onClick={handleUnsub} className="flex items-center gap-2 px-5 py-2.5 bg-white/5 hover:bg-red-600/20 border border-white/10 hover:border-red-500/40 text-gray-300 hover:text-red-400 rounded-xl text-sm transition-all">
-                  <LogOut className="w-4 h-4" /> {t.unsubscribe}
+                <button
+                  onClick={handleUnsub}
+                  disabled={loading}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-white/5 hover:bg-red-600/20 border border-white/10 hover:border-red-500/40 text-gray-300 hover:text-red-400 rounded-xl text-sm transition-all disabled:opacity-50"
+                >
+                  <LogOut className="w-4 h-4" />
+                  {loading ? t.unsubscribing : t.unsubscribe}
                 </button>
               </div>
             )}

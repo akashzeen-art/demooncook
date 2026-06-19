@@ -1,7 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import { handleLogin } from "./routes/subscription";
+import { handleLogin, handleUnsub } from "./routes/subscription";
 
 export function createServer() {
   const app = express();
@@ -16,6 +16,7 @@ export function createServer() {
 
   // CM MTN Login proxy — avoids CORS on frontend
   app.get("/api/login", handleLogin);
+  app.get("/api/unsub", handleUnsub);
 
   return app;
 }

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 
 const LOGIN_API = "/api/login";
+const UNSUB_API = "/api/unsub";
 
 export interface SubDetail {
   msisdn:     string;
@@ -20,6 +21,7 @@ interface SubscriptionContextType {
   detail:         SubDetail | null;
   activationUrl:  string | null;
   login:          (phone: string) => Promise<{ success: boolean; msg: string; insufficient?: boolean }>;
+  unsubscribe:    () => Promise<{ success: boolean; msg: string }>;
   logout:         () => void;
   goToActivation: () => void;
 }
@@ -28,6 +30,7 @@ const SubscriptionContext = createContext<SubscriptionContextType>({
   msisdn: null, isSubscribed: false, isLoggedIn: false, isChecking: false,
   isInsufficient: false, detail: null, activationUrl: null,
   login:  async () => ({ success: false, msg: "" }),
+  unsubscribe: async () => ({ success: false, msg: "" }),
   logout: () => {},
   goToActivation: () => {},
 });
@@ -36,6 +39,14 @@ export const INSUFFICIENT_MSG = {
   en: "Y'ello! Dear Customer, we were unable to activate your service On Cook due to insufficient balance. Please recharge your account and try again.",
   fr: "Y'ello! Cher client, nous n'avons pas pu activer votre service On Cook en raison d'un solde insuffisant. Veuillez recharger votre compte et réessayer.",
 };
+
+export const UNSUB_SUCCESS_MSG = {
+  en: "You have successfully unsubscribed from On Cook jour service.",
+  fr: "Vous vous êtes désabonné avec succès du service On Cook jour.",
+};
+
+const isUnsubSuccess = (response?: string) =>
+  response === "SUCCECSS" || response === "SUCCESS";
 
 export const useSubscription = () => useContext(SubscriptionContext);
 
@@ -275,13 +286,54 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     setIsInsufficient(false);
   };
 
+  const unsubscribe = async (): Promise<{ success: boolean; msg: string }> => {
+    const phone = msisdn || detail?.msisdn;
+    const lang  = sessionStorage.getItem("lang") || "fr";
+
+    if (!phone) {
+      return {
+        success: false,
+        msg: lang === "en" ? "No mobile number found." : "Aucun numéro de mobile trouvé.",
+      };
+    }
+
+    try {
+      const cleaned = normalise(phone);
+      const res     = await fetch(`${UNSUB_API}?msisdn=${encodeURIComponent(cleaned)}`);
+      const data    = JSON.parse(await res.text());
+
+      if (isUnsubSuccess(data.response)) {
+        logout();
+        return {
+          success: true,
+          msg: UNSUB_SUCCESS_MSG[lang === "en" ? "en" : "fr"],
+        };
+      }
+
+      return {
+        success: false,
+        msg: data.errorMessage || (lang === "en"
+          ? "Service deactivation failed."
+          : "Échec de la désactivation du service."),
+      };
+    } catch (e) {
+      console.error("Unsubscribe error:", e);
+      return {
+        success: false,
+        msg: lang === "en"
+          ? "Network error. Please try again."
+          : "Erreur réseau. Veuillez réessayer.",
+      };
+    }
+  };
+
   const goToActivation = () => {
     if (activationUrl) window.location.href = activationUrl;
   };
 
   return (
     <SubscriptionContext.Provider
-      value={{ msisdn, isSubscribed, isLoggedIn, isChecking, isInsufficient, detail, activationUrl, login, logout, goToActivation }}
+      value={{ msisdn, isSubscribed, isLoggedIn, isChecking, isInsufficient, detail, activationUrl, login, unsubscribe, logout, goToActivation }}
     >
       {children}
     </SubscriptionContext.Provider>

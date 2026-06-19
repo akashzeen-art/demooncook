@@ -12,6 +12,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace("/api/login", "/prod/CPLogin/CMMTN"),
       },
+      "/api/unsub": {
+        target: "http://168.144.122.72",
+        changeOrigin: true,
+        rewrite: (path) => path.replace("/api/unsub", "/prod/CMMTN/unsub"),
+      },
     },
     fs: {
       allow: [".", "./client", "./shared"],
