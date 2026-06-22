@@ -1,4 +1,5 @@
 import { RequestHandler } from "express";
+import type { UnsubApiResponse } from "@shared/api";
 
 const LOGIN_API = "http://168.144.122.72/prod/CPLogin/CMMTN";
 const UNSUB_API = "http://168.144.122.72/prod/CMMTN/unsub";
@@ -35,7 +36,7 @@ export const handleUnsub: RequestHandler = async (req, res) => {
 
   try {
     const r    = await fetch(`${UNSUB_API}?cp=${CP}&pid=${PID}&msisdn=${encodeURIComponent(msisdn)}`);
-    const data = await r.json();
+    const data = (await r.json()) as UnsubApiResponse;
     res.json(data);
   } catch {
     res.status(500).json({ response: "FAIL", errorMessage: "Failed to reach unsub server" });

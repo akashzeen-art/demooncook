@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 
 const LOGIN_API = "/api/login";
 const UNSUB_API = "/api/unsub";
+const UNSUB_CP  = "1";
+const UNSUB_PID = "1";
 export const LANDING_URL = "http://168.144.122.72/prod/LP/landing?creatid=1&hash=CMMTN";
 
 export interface SubDetail {
@@ -65,8 +67,18 @@ export const UNSUB_SUCCESS_MSG = {
   fr: "Vous vous êtes désabonné avec succès du service On Cook jour.",
 };
 
-const isUnsubSuccess = (response?: string) =>
-  response === "SUCCECSS" || response === "SUCCESS";
+const isUnsubSuccess = (response?: string) => {
+  const r = (response || "").toUpperCase().trim();
+  return r === "SUCCECSS" || r === "SUCCESS";
+};
+
+const parseUnsubResponse = (text: string) => {
+  const data = JSON.parse(text.trim()) as { response?: string; errorMessage?: string };
+  return {
+    response:     typeof data.response === "string" ? data.response.toUpperCase().trim() : "",
+    errorMessage: data.errorMessage || "",
+  };
+};
 
 export const useSubscription = () => useContext(SubscriptionContext);
 
@@ -383,22 +395,24 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       const cleaned = normalise(phone);
-      const res     = await fetch(`${UNSUB_API}?msisdn=${encodeURIComponent(cleaned)}`);
-      const data    = JSON.parse(await res.text());
+      const res     = await fetch(
+        `${UNSUB_API}?cp=${UNSUB_CP}&pid=${UNSUB_PID}&msisdn=${encodeURIComponent(cleaned)}`,
+      );
+      const data = parseUnsubResponse(await res.text());
 
       if (isUnsubSuccess(data.response)) {
         logout();
         return {
           success: true,
-          msg: UNSUB_SUCCESS_MSG[lang === "en" ? "en" : "fr"],
+          msg: data.errorMessage || UNSUB_SUCCESS_MSG[lang === "en" ? "en" : "fr"],
         };
       }
 
       return {
         success: false,
         msg: data.errorMessage || (lang === "en"
-          ? "Service deactivation failed."
-          : "Échec de la désactivation du service."),
+          ? "Service Deactivation Failed"
+          : "Échec de la désactivation du service"),
       };
     } catch (e) {
       console.error("Unsubscribe error:", e);
