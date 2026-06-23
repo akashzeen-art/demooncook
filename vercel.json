@@ -7,6 +7,10 @@
       "destination": "http://168.144.122.72/prod/CPLogin/CMMTN"
     },
     {
+      "source": "/api/unsub",
+      "destination": "http://168.144.122.72/prod/CMMTN/unsub"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

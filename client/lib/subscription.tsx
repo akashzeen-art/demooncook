@@ -73,7 +73,11 @@ const isUnsubSuccess = (response?: string) => {
 };
 
 const parseUnsubResponse = (text: string) => {
-  const data = JSON.parse(text.trim()) as { response?: string; errorMessage?: string };
+  const trimmed = text.trim();
+  if (trimmed.startsWith("<!") || trimmed.startsWith("<html")) {
+    throw new Error("Unsubscribe API returned HTML instead of JSON");
+  }
+  const data = JSON.parse(trimmed) as { response?: string; errorMessage?: string };
   return {
     response:     typeof data.response === "string" ? data.response.toUpperCase().trim() : "",
     errorMessage: data.errorMessage || "",
