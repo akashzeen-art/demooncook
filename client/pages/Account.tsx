@@ -87,8 +87,8 @@ export default function Account() {
     <div className="bg-black min-h-screen text-white">
       {lang === "en" ? <NavbarEn /> : <Navbar />}
 
-      <div className="max-w-2xl mx-auto px-4 py-16">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+      <div className="max-w-2xl mx-auto px-4 pt-8 pb-12">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
 
           <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm">
             <ArrowLeft className="w-4 h-4" /> {t.back}
@@ -124,13 +124,6 @@ export default function Account() {
               </motion.div>
             )}
           </AnimatePresence>
-
-          <div className={`p-4 rounded-2xl border flex items-center gap-3 ${isSubscribed ? "bg-green-500/5 border-green-500/20" : "bg-red-500/5 border-red-500/20"}`}>
-            <div className={`w-3 h-3 rounded-full animate-pulse ${isSubscribed ? "bg-green-500" : "bg-red-500"}`} />
-            <span className={`font-semibold text-sm ${isSubscribed ? "text-green-400" : "text-red-400"}`}>
-              {isSubscribed ? t.active : t.inactive}
-            </span>
-          </div>
 
           {detail && (
             <div className="bg-zinc-900 border border-white/10 rounded-2xl overflow-hidden">
