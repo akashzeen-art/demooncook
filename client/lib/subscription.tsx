@@ -420,11 +420,16 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
       };
     } catch (e) {
       console.error("Unsubscribe error:", e);
+      const isHtmlResponse = e instanceof Error && e.message.includes("HTML instead of JSON");
       return {
         success: false,
-        msg: lang === "en"
-          ? "Network error. Please try again."
-          : "Erreur réseau. Veuillez réessayer.",
+        msg: isHtmlResponse
+          ? (lang === "en"
+            ? "Unsubscribe API is not configured on the server. Ask your admin to reload nginx with the /api/unsub proxy."
+            : "L'API de désabonnement n'est pas configurée sur le serveur. Demandez à l'administrateur de recharger nginx avec le proxy /api/unsub.")
+          : (lang === "en"
+            ? "Network error. Please try again."
+            : "Erreur réseau. Veuillez réessayer."),
       };
     }
   };

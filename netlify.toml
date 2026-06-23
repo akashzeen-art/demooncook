@@ -16,7 +16,7 @@
 
 [[redirects]]
   from = "/api/unsub"
-  to = "http://168.144.122.72/prod/CMMTN/unsub"
+  to = "/.netlify/functions/unsub"
   status = 200
   force = true
 
