@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { User, Calendar, Phone, Shield, DollarSign, LogOut, ArrowLeft, RefreshCw, CheckCircle, AlertCircle } from "lucide-react";
+import { User, Calendar, Phone, Shield, DollarSign, LogOut, ArrowLeft, RefreshCw, CheckCircle, AlertCircle, X } from "lucide-react";
 import { useSubscription } from "@/lib/subscription";
 import { Navbar } from "@/components/Navbar";
 import { NavbarEn } from "@/components/en/NavbarEn";
@@ -23,6 +23,10 @@ const T = {
     validity:       "Validité",
     days:           "jour(s)",
     cancelMsg:      "Voulez-vous annuler votre abonnement ?",
+    confirmTitle:   "Confirmer la désinscription",
+    confirmBody:    "Voulez-vous vous désabonner du service On Cook ?",
+    confirmYes:     "Oui, se désabonner",
+    confirmNo:      "Non, annuler",
     unsubscribe:    "Se désabonner",
     unsubscribing:  "Désabonnement...",
   },
@@ -40,6 +44,10 @@ const T = {
     validity:       "Validity",
     days:           "day(s)",
     cancelMsg:      "Want to cancel your subscription?",
+    confirmTitle:   "Confirm Unsubscribe",
+    confirmBody:    "Do you want to unsubscribe from On Cook service?",
+    confirmYes:     "Yes, unsubscribe",
+    confirmNo:      "No, cancel",
     unsubscribe:    "Unsubscribe",
     unsubscribing:  "Unsubscribing...",
   },
@@ -52,8 +60,21 @@ export default function Account() {
   const t          = T[lang];
   const [loading, setLoading] = useState(false);
   const [result, setResult]   = useState<{ success: boolean; msg: string } | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  useEffect(() => {
+    if (!showConfirm) return;
+    document.body.style.overflow = "hidden";
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setShowConfirm(false); };
+    window.addEventListener("keydown", handler);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", handler);
+    };
+  }, [showConfirm]);
 
   const handleUnsub = async () => {
+    setShowConfirm(false);
     setLoading(true);
     setResult(null);
     const res = await unsubscribe();
@@ -138,9 +159,9 @@ export default function Account() {
               <div>
                 <p className="text-gray-500 text-sm mb-3">{t.cancelMsg}</p>
                 <button
-                  onClick={handleUnsub}
+                  onClick={() => setShowConfirm(true)}
                   disabled={loading}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-white/5 hover:bg-red-600/20 border border-white/10 hover:border-red-500/40 text-gray-300 hover:text-red-400 rounded-xl text-sm transition-all disabled:opacity-50"
+                  className="flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 border border-red-500/50 text-white font-semibold rounded-xl text-sm transition-all disabled:opacity-50 shadow-lg shadow-red-600/20"
                 >
                   <LogOut className="w-4 h-4" />
                   {loading ? t.unsubscribing : t.unsubscribe}
@@ -153,6 +174,58 @@ export default function Account() {
       </div>
 
       {lang === "en" ? <FooterEn /> : <Footer />}
+
+      <AnimatePresence>
+        {showConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+            onClick={() => setShowConfirm(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="relative w-full max-w-sm bg-zinc-900 border border-white/10 rounded-2xl overflow-hidden shadow-2xl shadow-black/60"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="h-1 w-full bg-gradient-to-r from-red-600 to-red-400" />
+
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-cinematic text-white">{t.confirmTitle}</h3>
+                  <button
+                    onClick={() => setShowConfirm(false)}
+                    className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-all"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <p className="text-gray-400 text-sm leading-relaxed mb-6">{t.confirmBody}</p>
+
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={handleUnsub}
+                    className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl transition-all text-sm"
+                  >
+                    {t.confirmYes}
+                  </button>
+                  <button
+                    onClick={() => setShowConfirm(false)}
+                    className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white rounded-xl transition-all text-sm"
+                  >
+                    {t.confirmNo}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
