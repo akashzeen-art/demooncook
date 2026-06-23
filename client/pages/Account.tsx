@@ -74,12 +74,13 @@ export default function Account() {
   }, [showConfirm]);
 
   const handleUnsub = async () => {
-    setShowConfirm(false);
     setLoading(true);
     setResult(null);
     const res = await unsubscribe();
     setLoading(false);
+    setShowConfirm(false);
     setResult(res);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
@@ -210,12 +211,14 @@ export default function Account() {
                 <div className="flex flex-col gap-3">
                   <button
                     onClick={handleUnsub}
-                    className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl transition-all text-sm"
+                    disabled={loading}
+                    className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl transition-all text-sm disabled:opacity-50"
                   >
-                    {t.confirmYes}
+                    {loading ? t.unsubscribing : t.confirmYes}
                   </button>
                   <button
                     onClick={() => setShowConfirm(false)}
+                    disabled={loading}
                     className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white rounded-xl transition-all text-sm"
                   >
                     {t.confirmNo}
