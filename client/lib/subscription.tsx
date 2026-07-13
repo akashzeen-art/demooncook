@@ -2,8 +2,9 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 
 const LOGIN_API = "/api/login";
 const UNSUB_API = "/api/unsub";
+const LOGIN_PID = "9";
 const UNSUB_CP  = "1";
-const UNSUB_PID = "1";
+const UNSUB_PID = "9";
 export const LANDING_URL = "http://168.144.122.72/prod/LP/landing?creatid=1&hash=CMMTN";
 
 export interface SubDetail {
@@ -280,7 +281,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
 
   const verifyByMsisdn = async (cleaned: string) => {
     try {
-      const res  = await fetch(`${LOGIN_API}?pid=1&msisdn=${encodeURIComponent(cleaned)}`);
+      const res  = await fetch(`${LOGIN_API}?pid=${LOGIN_PID}&msisdn=${encodeURIComponent(cleaned)}`);
       const data = parseLoginResponse(await res.text());
       if (data.response === "ACTIVE") {
         applyDetail(cleaned, data);
@@ -294,7 +295,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
 
   const verifyBySid = async (sid: string) => {
     try {
-      const res  = await fetch(`${LOGIN_API}?pid=1&sid=${encodeURIComponent(sid)}`);
+      const res  = await fetch(`${LOGIN_API}?pid=${LOGIN_PID}&sid=${encodeURIComponent(sid)}`);
       const data = parseLoginResponse(await res.text());
       if (data.response === "ACTIVE") {
         const match    = (data.unsubUrl || "").match(/msisdn=(\d+)/);
@@ -336,7 +337,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
       return { success: false, msg: "Please enter a valid 9-digit phone number." };
 
     try {
-      const res  = await fetch(`${LOGIN_API}?pid=1&msisdn=${encodeURIComponent(cleaned)}`);
+      const res  = await fetch(`${LOGIN_API}?pid=${LOGIN_PID}&msisdn=${encodeURIComponent(cleaned)}`);
       const data = parseLoginResponse(await res.text());
 
       if (data.response === "ACTIVE") {

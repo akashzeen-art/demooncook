@@ -61,4 +61,4 @@ fi
 
 nginx -t
 systemctl reload nginx
-echo "Done. Test: curl -s 'https://oncook.co/api/unsub?cp=1&pid=1&msisdn=TEST' | head -c 120"
+echo "Done. Test: curl -s 'https://oncook.co/api/unsub?cp=1&pid=9&msisdn=TEST' | head -c 120"

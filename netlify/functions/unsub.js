@@ -1,6 +1,6 @@
 const UNSUB_API = "http://168.144.122.72/prod/CMMTN/unsub";
 const CP  = "1";
-const PID = "1";
+const PID = "9";
 
 exports.handler = async function (event) {
   const msisdn = event.queryStringParameters && event.queryStringParameters.msisdn;
