@@ -6,7 +6,7 @@ interface LoadingSpinnerProps {
   duration?: number;
 }
 
-export const LoadingSpinner = ({ onComplete, duration = 8 }: LoadingSpinnerProps) => {
+export const LoadingSpinner = ({ onComplete, duration = 5 }: LoadingSpinnerProps) => {
   const [progress, setProgress]   = useState(0);
   const [exiting, setExiting]     = useState(false);
   const [visible, setVisible]     = useState(true);

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, ChevronRight } from "lucide-react";
+import { Play } from "lucide-react";
 import { EN_VIDEOS } from "@/lib/videos-en";
 import { createPortal } from "react-dom";
 import { VideoPlayer } from "@/components/VideoPlayer";
@@ -27,15 +27,22 @@ export const HeroSectionEn = () => {
   const [index, setIndex]         = useState(0);
   const [open, setOpen]           = useState(false);
   const [showLogin, setShowLogin] = useState(false);
+  const [playing, setPlaying]     = useState<{ video: string; image: string; title: string } | null>(null);
   const { requestAccess }         = useContentGate();
 
   useEffect(() => {
+    if (open || showLogin) return;
     const t = setInterval(() => setIndex((p) => (p + 1) % BANNERS.length), 7000);
     return () => clearInterval(t);
-  }, []);
+  }, [open, showLogin]);
 
   const banner = BANNERS[index];
   const color  = CATEGORY_COLORS[banner.category] ?? "bg-red-500";
+
+  const openVideo = () => {
+    setPlaying({ video: banner.video, image: banner.image, title: banner.title });
+    setOpen(true);
+  };
 
   return (
     <section className="relative min-h-[100svh] flex items-end pb-16 md:pb-28 overflow-hidden">
@@ -103,20 +110,12 @@ export const HeroSectionEn = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => requestAccess({
-                  onGranted: () => setOpen(true),
+                  onGranted: () => openVideo(),
                   onLogin:   () => setShowLogin(true),
                 })}
                 className="flex items-center gap-2 px-6 py-3 md:px-8 md:py-4 bg-white text-black font-bold rounded-xl hover:bg-gray-100 transition-all text-sm md:text-base shadow-xl"
               >
                 <Play className="w-4 h-4 fill-black" /> Watch Now
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => document.getElementById("african")?.scrollIntoView({ behavior: "smooth" })}
-                className="flex items-center gap-2 px-6 py-3 md:px-8 md:py-4 bg-white/10 text-white font-semibold rounded-xl border border-white/30 hover:bg-white/20 transition-all backdrop-blur-sm text-sm md:text-base"
-              >
-                Explore <ChevronRight className="w-4 h-4" />
               </motion.button>
             </div>
           </motion.div>
@@ -134,8 +133,13 @@ export const HeroSectionEn = () => {
         </div>
       </div>
 
-      {open && createPortal(
-        <VideoPlayer video={banner.video} image={banner.image} title={banner.title} onClose={() => setOpen(false)} />,
+      {open && playing && createPortal(
+        <VideoPlayer
+          video={playing.video}
+          image={playing.image}
+          title={playing.title}
+          onClose={() => { setOpen(false); setPlaying(null); }}
+        />,
         document.body
       )}
       {showLogin && createPortal(
