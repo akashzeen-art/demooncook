@@ -3,8 +3,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Play } from "lucide-react";
 import { VIDEOS } from "@/lib/videos";
 import { VideoPlayer } from "@/components/VideoPlayer";
-import { LoginModal } from "@/components/LoginModal";
-import { useContentGate } from "@/lib/subscription";
 import { createPortal } from "react-dom";
 
 const BANNERS = [
@@ -16,24 +14,16 @@ const BANNERS = [
 ];
 
 export const HeroSection = () => {
-  const [index, setIndex]         = useState(0);
-  const [open, setOpen]           = useState(false);
-  const [showLogin, setShowLogin] = useState(false);
-  const [playing, setPlaying]     = useState<{ video: string; image: string; title: string } | null>(null);
-  const { requestAccess }         = useContentGate();
+  const [index, setIndex]     = useState(0);
+  const [playing, setPlaying] = useState<{ video: string; image: string; title: string } | null>(null);
 
   useEffect(() => {
-    if (open || showLogin) return;
+    if (playing) return;
     const t = setInterval(() => setIndex((p) => (p + 1) % BANNERS.length), 8000);
     return () => clearInterval(t);
-  }, [open, showLogin]);
+  }, [playing]);
 
   const banner = BANNERS[index];
-
-  const openVideo = () => {
-    setPlaying({ video: banner.video, image: banner.image, title: banner.title });
-    setOpen(true);
-  };
 
   return (
     <section id="hero" className="relative min-h-[100svh] flex items-end pb-16 md:pb-24 overflow-hidden">
@@ -75,10 +65,7 @@ export const HeroSection = () => {
             <div className="flex gap-3 pt-1">
               <motion.button
                 whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                onClick={() => requestAccess({
-                  onGranted: () => openVideo(),
-                  onLogin:   () => setShowLogin(true),
-                })}
+                onClick={() => setPlaying({ video: banner.video, image: banner.image, title: banner.title })}
                 className="flex items-center gap-2 px-5 py-3 md:px-8 md:py-4 bg-white text-black font-bold rounded-lg hover:bg-gray-200 transition-all text-sm md:text-base">
                 <Play className="w-4 h-4 md:w-5 md:h-5 fill-black" /> Regarder la vidéo
               </motion.button>
@@ -93,17 +80,13 @@ export const HeroSection = () => {
         </div>
       </div>
 
-      {open && playing && createPortal(
+      {playing && createPortal(
         <VideoPlayer
           video={playing.video}
           image={playing.image}
           title={playing.title}
-          onClose={() => { setOpen(false); setPlaying(null); }}
+          onClose={() => setPlaying(null)}
         />,
-        document.body
-      )}
-      {showLogin && createPortal(
-        <LoginModal onClose={() => setShowLogin(false)} />,
         document.body
       )}
     </section>

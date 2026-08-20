@@ -1,8 +1,6 @@
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { VideoPlayer } from "@/components/VideoPlayer";
-import { LoginModal } from "@/components/LoginModal";
-import { useContentGate } from "@/lib/subscription";
 
 interface VideoCardProps {
   image: string;
@@ -13,11 +11,9 @@ interface VideoCardProps {
 }
 
 export const VideoCard = ({ image, video, title, className = "", children }: VideoCardProps) => {
-  const videoRef                  = useRef<HTMLVideoElement>(null);
-  const [hovering, setHovering]   = useState(false);
-  const [open, setOpen]           = useState(false);
-  const [showLogin, setShowLogin] = useState(false);
-  const { requestAccess }         = useContentGate();
+  const videoRef              = useRef<HTMLVideoElement>(null);
+  const [hovering, setHovering] = useState(false);
+  const [open, setOpen]         = useState(false);
 
   const handleMouseEnter = () => {
     setHovering(true);
@@ -32,20 +28,13 @@ export const VideoCard = ({ image, video, title, className = "", children }: Vid
     }
   };
 
-  const handleClick = () => {
-    requestAccess({
-      onGranted: () => setOpen(true),
-      onLogin:   () => setShowLogin(true),
-    });
-  };
-
   return (
     <>
       <div
         className={`relative overflow-hidden cursor-pointer ${className}`}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        onClick={handleClick}
+        onClick={() => setOpen(true)}
       >
         <img
           src={image}
@@ -68,11 +57,6 @@ export const VideoCard = ({ image, video, title, className = "", children }: Vid
 
       {open && createPortal(
         <VideoPlayer video={video} image={image} title={title} onClose={() => setOpen(false)} />,
-        document.body
-      )}
-
-      {showLogin && createPortal(
-        <LoginModal onClose={() => setShowLogin(false)} />,
         document.body
       )}
     </>

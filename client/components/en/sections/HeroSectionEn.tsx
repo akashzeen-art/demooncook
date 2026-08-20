@@ -4,8 +4,6 @@ import { Play } from "lucide-react";
 import { EN_VIDEOS } from "@/lib/videos-en";
 import { createPortal } from "react-dom";
 import { VideoPlayer } from "@/components/VideoPlayer";
-import { LoginModal } from "@/components/LoginModal";
-import { useContentGate } from "@/lib/subscription";
 
 const BANNERS = [
   { image: EN_VIDEOS.african[0].image,    video: EN_VIDEOS.african[0].video,    title: "African Kitchen",       category: "African",     desc: "Bold spices, rich stews and the vibrant soul of African cooking." },
@@ -24,17 +22,14 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export const HeroSectionEn = () => {
-  const [index, setIndex]         = useState(0);
-  const [open, setOpen]           = useState(false);
-  const [showLogin, setShowLogin] = useState(false);
-  const [playing, setPlaying]     = useState<{ video: string; image: string; title: string } | null>(null);
-  const { requestAccess }         = useContentGate();
+  const [index, setIndex]     = useState(0);
+  const [playing, setPlaying] = useState<{ video: string; image: string; title: string } | null>(null);
 
   useEffect(() => {
-    if (open || showLogin) return;
+    if (playing) return;
     const t = setInterval(() => setIndex((p) => (p + 1) % BANNERS.length), 7000);
     return () => clearInterval(t);
-  }, [open, showLogin]);
+  }, [playing]);
 
   const banner = BANNERS[index];
   const color  = CATEGORY_COLORS[banner.category] ?? "bg-red-500";
@@ -109,10 +104,7 @@ export const HeroSectionEn = () => {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => requestAccess({
-                  onGranted: () => openVideo(),
-                  onLogin:   () => setShowLogin(true),
-                })}
+                onClick={() => setPlaying({ video: banner.video, image: banner.image, title: banner.title })}
                 className="flex items-center gap-2 px-6 py-3 md:px-8 md:py-4 bg-white text-black font-bold rounded-xl hover:bg-gray-100 transition-all text-sm md:text-base shadow-xl"
               >
                 <Play className="w-4 h-4 fill-black" /> Watch Now
@@ -133,17 +125,13 @@ export const HeroSectionEn = () => {
         </div>
       </div>
 
-      {open && playing && createPortal(
+      {playing && createPortal(
         <VideoPlayer
           video={playing.video}
           image={playing.image}
           title={playing.title}
-          onClose={() => { setOpen(false); setPlaying(null); }}
+          onClose={() => setPlaying(null)}
         />,
-        document.body
-      )}
-      {showLogin && createPortal(
-        <LoginModal onClose={() => setShowLogin(false)} />,
         document.body
       )}
     </section>
