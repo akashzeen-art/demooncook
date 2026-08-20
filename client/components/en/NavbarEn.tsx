@@ -1,9 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { Menu, X, ChevronDown, Globe, User, LogIn } from "lucide-react";
+import { Menu, X, ChevronDown, Globe } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useSubscription } from "@/lib/subscription";
-import { LoginModal } from "@/components/LoginModal";
 
 const CATEGORIES = [
   { label: "African",     href: "#african" },
@@ -19,14 +17,12 @@ export const NavbarEn = () => {
   const [isOpen, setIsOpen]     = useState(false);
   const [catOpen, setCatOpen]   = useState(false);
   const [langOpen, setLangOpen] = useState(false);
-  const [showLogin, setShowLogin] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [progress, setProgress] = useState(0);
   const location                = useLocation();
   const navigate                = useNavigate();
   const catRef                  = useRef<HTMLDivElement>(null);
   const langRef                 = useRef<HTMLDivElement>(null);
-  const { isLoggedIn, msisdn }  = useSubscription();
 
   useEffect(() => {
     const onScroll = () => {
@@ -128,16 +124,7 @@ export const NavbarEn = () => {
                   )}
                 </AnimatePresence>
               </div>
-              {isLoggedIn ? (
-                <button onClick={() => navigate("/account")} className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-300 hover:text-white border border-white/20 hover:border-white/40 rounded-lg transition-all">
-                  <User className="w-3.5 h-3.5" />
-                  <span>My Account</span>
-                </button>
-              ) : (
-                <button onClick={() => setShowLogin(true)} className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-all">
-                  <LogIn className="w-3.5 h-3.5" /> Login
-                </button>
-              )}
+
             </div>
 
             {/* Mobile hamburger */}
@@ -169,15 +156,7 @@ export const NavbarEn = () => {
                   <button onClick={() => { setIsOpen(false); navigate("/en"); }} className="flex-1 py-2.5 bg-white/10 text-white text-sm font-semibold rounded-xl">English</button>
                   <button onClick={() => { setIsOpen(false); navigate("/fr"); }} className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-xl transition-all">Français</button>
                 </div>
-                {isLoggedIn ? (
-                  <button onClick={() => { setIsOpen(false); navigate("/account"); }} className="w-full flex items-center gap-2 px-4 py-3 text-gray-300 hover:text-white hover:bg-white/5 rounded-xl transition-colors text-sm">
-                    <User className="w-4 h-4" /> My Account
-                  </button>
-                ) : (
-                  <button onClick={() => { setIsOpen(false); setShowLogin(true); }} className="w-full flex items-center justify-center gap-2 py-3 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-xl transition-all">
-                    <LogIn className="w-4 h-4" /> Login
-                  </button>
-                )}
+
               </div>
             </motion.div>
           )}
@@ -185,7 +164,6 @@ export const NavbarEn = () => {
       </motion.nav>
 
       <div className="h-16" />
-      {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
     </>
   );
 };

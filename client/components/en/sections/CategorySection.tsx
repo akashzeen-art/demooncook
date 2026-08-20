@@ -1,7 +1,8 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Play } from "lucide-react";
-import { VideoCard } from "@/components/VideoCard";
+import { VideoPlayer } from "@/components/VideoPlayer";
+import { createPortal } from "react-dom";
 import type { EnVideo } from "@/lib/videos-en";
 
 interface CategorySectionProps {
@@ -22,6 +23,7 @@ export const CategorySection = ({
   dark = true,
 }: CategorySectionProps) => {
   const sliderRef = useRef<HTMLDivElement>(null);
+  const [activeVideo, setActiveVideo] = useState<EnVideo | null>(null);
   const scroll = (dir: "left" | "right") => {
     sliderRef.current?.scrollBy({ left: dir === "left" ? -340 : 340, behavior: "smooth" });
   };
@@ -52,20 +54,20 @@ export const CategorySection = ({
         </div>
 
         <div ref={sliderRef} className="flex gap-5 overflow-x-auto scrollbar-hide pb-3">
-          {videos.map((video, i) => (
+          {videos.map((video) => (
             <div
               key={video.id}
               className="group flex-shrink-0 w-56 md:w-64 cursor-pointer"
+              onClick={() => setActiveVideo(video)}
             >
               <div className="relative aspect-video rounded-2xl overflow-hidden mb-3 shadow-lg shadow-black/40">
-                <VideoCard image={video.image} video={video.video} title={video.title} className="absolute inset-0 w-full h-full">
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300" />
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
-                    <div className="w-12 h-12 rounded-full flex items-center justify-center shadow-2xl" style={{ backgroundColor: accentHex }}>
-                      <Play className="w-5 h-5 fill-white text-white ml-0.5" />
-                    </div>
+                <img src={video.image} alt={video.title} className="absolute inset-0 w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300" />
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center shadow-2xl" style={{ backgroundColor: accentHex }}>
+                    <Play className="w-5 h-5 fill-white text-white ml-0.5" />
                   </div>
-                </VideoCard>
+                </div>
               </div>
               <div className="px-1">
                 <h3 className="text-white text-sm font-semibold leading-snug line-clamp-2 group-hover:text-gray-200 transition-colors">{video.title}</h3>
@@ -74,6 +76,11 @@ export const CategorySection = ({
             </div>
           ))}
         </div>
+
+      {activeVideo && createPortal(
+        <VideoPlayer video={activeVideo.video} image={activeVideo.image} title={activeVideo.title} onClose={() => setActiveVideo(null)} />,
+        document.body
+      )}
       </div>
     </section>
   );

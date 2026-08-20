@@ -30,9 +30,9 @@ const App = () => (
           <Routes>
             <Route path="/account"   element={<Account />} />
             <Route path="/subscribe" element={<Subscribe />} />
-            <Route path="/"   element={<SubscriptionGate><Index /></SubscriptionGate>} />
+            <Route path="/"   element={<IndexEn />} />
             <Route path="/fr" element={<SubscriptionGate><Index /></SubscriptionGate>} />
-            <Route path="/en" element={<SubscriptionGate><IndexEn /></SubscriptionGate>} />
+            <Route path="/en" element={<IndexEn />} />
             <Route path="*"   element={<NotFound />} />
           </Routes>
         </SubscriptionProvider>
